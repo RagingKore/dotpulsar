@@ -12,17 +12,17 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal.Abstractions
 {
+    using System;
+    using System.Threading.Tasks;
+    using PulsarApi;
+
     public interface IConnection : IAsyncDisposable
     {
         ValueTask<bool> HasChannels();
 
-        Task<ProducerResponse> Send(CommandProducer command, IChannel channel);
+        Task<ProducerResponse>  Send(CommandProducer command, IChannel channel);
         Task<SubscribeResponse> Send(CommandSubscribe command, IChannel channel);
 
         Task Send(CommandPing command);

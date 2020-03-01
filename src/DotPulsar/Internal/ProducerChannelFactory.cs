@@ -12,22 +12,22 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using PulsarApi;
+
     public sealed class ProducerChannelFactory : IProducerChannelFactory
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private readonly IConnectionPool _connectionPool;
-        private readonly IExecute _executor;
-        private readonly SequenceId _sequenceId;
-        private readonly CommandProducer _commandProducer;
+        readonly CommandProducer _commandProducer;
+        readonly IConnectionPool _connectionPool;
+        readonly Guid            _correlationId;
+        readonly IRegisterEvent  _eventRegister;
+        readonly IExecute        _executor;
+        readonly SequenceId      _sequenceId;
 
         public ProducerChannelFactory(
             Guid correlationId,
@@ -36,27 +36,27 @@ namespace DotPulsar.Internal
             IExecute executor,
             ProducerOptions options)
         {
-            _correlationId = correlationId;
-            _eventRegister = eventRegister;
+            _correlationId  = correlationId;
+            _eventRegister  = eventRegister;
             _connectionPool = connectionPool;
-            _executor = executor;
-            _sequenceId = new SequenceId(options.InitialSequenceId);
+            _executor       = executor;
+            _sequenceId     = new SequenceId(options.InitialSequenceId);
 
             _commandProducer = new CommandProducer
             {
                 ProducerName = options.ProducerName,
-                Topic = options.Topic
+                Topic        = options.Topic
             };
         }
 
         public async Task<IProducerChannel> Create(CancellationToken cancellationToken)
             => await _executor.Execute(() => GetChannel(cancellationToken), cancellationToken);
 
-        private async ValueTask<IProducerChannel> GetChannel(CancellationToken cancellationToken)
+        async ValueTask<IProducerChannel> GetChannel(CancellationToken cancellationToken)
         {
             var connection = await _connectionPool.FindConnectionForTopic(_commandProducer.Topic, cancellationToken);
-            var channel = new Channel(_correlationId, _eventRegister, new AsyncQueue<MessagePackage>());
-            var response = await connection.Send(_commandProducer, channel);
+            var channel    = new Channel(_correlationId, _eventRegister, new AsyncQueue<MessagePackage>());
+            var response   = await connection.Send(_commandProducer, channel);
             return new ProducerChannel(response.ProducerId, response.ProducerName, _sequenceId, connection);
         }
     }

@@ -12,13 +12,13 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Stress.Tests
 {
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading.Tasks;
+
     public static class EnumerableValueTaskExtensions
     {
         [DebuggerStepThrough]
@@ -52,12 +52,9 @@ namespace DotPulsar.Stress.Tests
                     : operation.Result;
         }
 
-        private static ValueTaskInfo<TResult> GetInfo<TResult>(this ValueTask<TResult> source)
-        {
-            return source.IsCompleted
-                ? new ValueTaskInfo<TResult>(source.Result)
-                : new ValueTaskInfo<TResult>(source.AsTask());
-        }
+        private static ValueTaskInfo<TResult> GetInfo<TResult>(this ValueTask<TResult> source) => source.IsCompleted
+            ? new ValueTaskInfo<TResult>(source.Result)
+            : new ValueTaskInfo<TResult>(source.AsTask());
 
         private struct ValueTaskInfo<TResult>
         {
@@ -65,19 +62,19 @@ namespace DotPulsar.Stress.Tests
             {
                 IsTask = true;
                 Result = default;
-                Task = task;
+                Task   = task;
             }
 
             public ValueTaskInfo(TResult result)
             {
                 IsTask = false;
                 Result = result;
-                Task = default;
+                Task   = default;
             }
 
-            public bool IsTask { get; }
-            public TResult Result { get; }
-            public Task<TResult> Task { get; }
+            public bool          IsTask { get; }
+            public TResult       Result { get; }
+            public Task<TResult> Task   { get; }
         }
     }
 

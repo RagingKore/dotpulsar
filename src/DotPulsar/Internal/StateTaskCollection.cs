@@ -12,20 +12,20 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     public sealed class StateTaskCollection<TState> where TState : notnull
     {
-        private readonly object _lock;
-        private readonly LinkedList<StateTask<TState>> _awaitors;
+        readonly LinkedList<StateTask<TState>> _awaitors;
+        readonly object                        _lock;
 
         public StateTaskCollection()
         {
-            _lock = new object();
+            _lock     = new object();
             _awaitors = new LinkedList<StateTask<TState>>();
         }
 
@@ -47,15 +47,18 @@ namespace DotPulsar.Internal
             lock (_lock)
             {
                 var awaitor = _awaitors.First;
+
                 while (awaitor != null)
                 {
                     var next = awaitor.Next;
+
                     if (awaitor.Value.IsAwaiting(state))
                     {
                         _awaitors.Remove(awaitor);
                         awaitor.Value.CancelableCompletionSource.SetResult(state);
                         awaitor.Value.CancelableCompletionSource.Dispose();
                     }
+
                     awaitor = next;
                 }
             }
@@ -70,11 +73,12 @@ namespace DotPulsar.Internal
                     awaitor.CancelableCompletionSource.SetResult(state);
                     awaitor.CancelableCompletionSource.Dispose();
                 }
+
                 _awaitors.Clear();
             }
         }
 
-        private void TaskWasCanceled(LinkedListNode<StateTask<TState>> node)
+        void TaskWasCanceled(LinkedListNode<StateTask<TState>> node)
         {
             lock (_lock)
             {

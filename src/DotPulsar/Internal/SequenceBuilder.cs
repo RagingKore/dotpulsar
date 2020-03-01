@@ -12,18 +12,20 @@
  * limitations under the License.
  */
 
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Buffers;
+    using System.Collections.Generic;
+    using System.Linq;
+
     public sealed class SequenceBuilder<T> where T : notnull
     {
-        private readonly LinkedList<ReadOnlyMemory<T>> _elements;
+        readonly LinkedList<ReadOnlyMemory<T>> _elements;
 
         public SequenceBuilder() => _elements = new LinkedList<ReadOnlyMemory<T>>();
+
+        public long Length => _elements.Sum(e => e.Length);
 
         public SequenceBuilder<T> Prepend(ReadOnlyMemory<T> memory)
         {
@@ -36,12 +38,10 @@ namespace DotPulsar.Internal
             LinkedListNode<ReadOnlyMemory<T>>? index = null;
 
             foreach (var memory in sequence)
-            {
                 if (index is null)
                     index = _elements.AddFirst(memory);
                 else
                     index = _elements.AddAfter(index, memory);
-            }
 
             return this;
         }
@@ -60,35 +60,33 @@ namespace DotPulsar.Internal
             return this;
         }
 
-        public long Length => _elements.Sum(e => e.Length);
-
         public ReadOnlySequence<T> Build()
         {
             if (_elements.Count == 0)
                 return new ReadOnlySequence<T>();
 
-            Segment? start = null;
+            Segment? start   = null;
             Segment? current = null;
 
             foreach (var element in _elements)
-            {
                 if (current is null)
                 {
                     current = new Segment(element);
-                    start = current;
+                    start   = current;
                 }
                 else
+                {
                     current = current.CreateNext(element);
-            }
+                }
 
             return new ReadOnlySequence<T>(start, 0, current, current!.Memory.Length);
         }
 
-        private sealed class Segment : ReadOnlySequenceSegment<T>
+        sealed class Segment : ReadOnlySequenceSegment<T>
         {
             public Segment(ReadOnlyMemory<T> memory, long runningIndex = 0)
             {
-                Memory = memory;
+                Memory       = memory;
                 RunningIndex = runningIndex;
             }
 

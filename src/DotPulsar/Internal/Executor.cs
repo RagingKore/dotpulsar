@@ -12,25 +12,25 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Events;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using DotPulsar.Abstractions;
+    using Events;
+
     public sealed class Executor : IExecute
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private readonly IHandleException _exceptionHandler;
+        readonly Guid             _correlationId;
+        readonly IRegisterEvent   _eventRegister;
+        readonly IHandleException _exceptionHandler;
 
         public Executor(Guid correlationId, IRegisterEvent eventRegister, IHandleException exceptionHandler)
         {
-            _correlationId = correlationId;
-            _eventRegister = eventRegister;
+            _correlationId    = correlationId;
+            _eventRegister    = eventRegister;
             _exceptionHandler = exceptionHandler;
         }
 
@@ -145,7 +145,7 @@ namespace DotPulsar.Internal
             }
         }
 
-        private async ValueTask<bool> Handle(Exception exception, CancellationToken cancellationToken)
+        async ValueTask<bool> Handle(Exception exception, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
                 return true;

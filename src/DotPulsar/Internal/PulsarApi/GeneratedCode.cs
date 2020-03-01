@@ -24,7 +24,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class Schema : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -65,7 +65,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class MessageIdData : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -84,7 +84,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePartition() => __pbn__Partition != null;
         public void ResetPartition() => __pbn__Partition = null;
-        private int? __pbn__Partition;
+        int? __pbn__Partition;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"batch_index")]
         [global::System.ComponentModel.DefaultValue(-1)]
@@ -95,13 +95,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeBatchIndex() => __pbn__BatchIndex != null;
         public void ResetBatchIndex() => __pbn__BatchIndex = null;
-        private int? __pbn__BatchIndex;
+        int? __pbn__BatchIndex;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class KeyValue : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -115,7 +115,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class KeyLongValue : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -129,7 +129,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class EncryptionKeys : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -146,7 +146,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class MessageMetadata : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -171,7 +171,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeReplicatedFrom() => __pbn__ReplicatedFrom != null;
         public void ResetReplicatedFrom() => __pbn__ReplicatedFrom = null;
-        private string __pbn__ReplicatedFrom;
+        string __pbn__ReplicatedFrom;
 
         [global::ProtoBuf.ProtoMember(6, Name = @"partition_key")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -182,7 +182,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePartitionKey() => __pbn__PartitionKey != null;
         public void ResetPartitionKey() => __pbn__PartitionKey = null;
-        private string __pbn__PartitionKey;
+        string __pbn__PartitionKey;
 
         [global::ProtoBuf.ProtoMember(7, Name = @"replicate_to")]
         public global::System.Collections.Generic.List<string> ReplicateToes { get; } = new global::System.Collections.Generic.List<string>();
@@ -196,7 +196,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeCompression() => __pbn__Compression != null;
         public void ResetCompression() => __pbn__Compression = null;
-        private CompressionType? __pbn__Compression;
+        CompressionType? __pbn__Compression;
 
         [global::ProtoBuf.ProtoMember(9, Name = @"uncompressed_size")]
         [global::System.ComponentModel.DefaultValue(0)]
@@ -207,7 +207,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeUncompressedSize() => __pbn__UncompressedSize != null;
         public void ResetUncompressedSize() => __pbn__UncompressedSize = null;
-        private uint? __pbn__UncompressedSize;
+        uint? __pbn__UncompressedSize;
 
         [global::ProtoBuf.ProtoMember(11, Name = @"num_messages_in_batch")]
         [global::System.ComponentModel.DefaultValue(1)]
@@ -218,7 +218,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeNumMessagesInBatch() => __pbn__NumMessagesInBatch != null;
         public void ResetNumMessagesInBatch() => __pbn__NumMessagesInBatch = null;
-        private int? __pbn__NumMessagesInBatch;
+        int? __pbn__NumMessagesInBatch;
 
         [global::ProtoBuf.ProtoMember(12, Name = @"event_time")]
         [global::System.ComponentModel.DefaultValue(0)]
@@ -229,7 +229,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeEventTime() => __pbn__EventTime != null;
         public void ResetEventTime() => __pbn__EventTime = null;
-        private ulong? __pbn__EventTime;
+        ulong? __pbn__EventTime;
 
         [global::ProtoBuf.ProtoMember(13, Name = @"encryption_keys")]
         public global::System.Collections.Generic.List<EncryptionKeys> EncryptionKeys { get; } = new global::System.Collections.Generic.List<EncryptionKeys>();
@@ -243,7 +243,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeEncryptionAlgo() => __pbn__EncryptionAlgo != null;
         public void ResetEncryptionAlgo() => __pbn__EncryptionAlgo = null;
-        private string __pbn__EncryptionAlgo;
+        string __pbn__EncryptionAlgo;
 
         [global::ProtoBuf.ProtoMember(15, Name = @"encryption_param")]
         public byte[] EncryptionParam
@@ -253,7 +253,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeEncryptionParam() => __pbn__EncryptionParam != null;
         public void ResetEncryptionParam() => __pbn__EncryptionParam = null;
-        private byte[] __pbn__EncryptionParam;
+        byte[] __pbn__EncryptionParam;
 
         [global::ProtoBuf.ProtoMember(16, Name = @"schema_version")]
         public byte[] SchemaVersion
@@ -263,7 +263,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeSchemaVersion() => __pbn__SchemaVersion != null;
         public void ResetSchemaVersion() => __pbn__SchemaVersion = null;
-        private byte[] __pbn__SchemaVersion;
+        byte[] __pbn__SchemaVersion;
 
         [global::ProtoBuf.ProtoMember(17, Name = @"partition_key_b64_encoded")]
         [global::System.ComponentModel.DefaultValue(false)]
@@ -274,7 +274,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePartitionKeyB64Encoded() => __pbn__PartitionKeyB64Encoded != null;
         public void ResetPartitionKeyB64Encoded() => __pbn__PartitionKeyB64Encoded = null;
-        private bool? __pbn__PartitionKeyB64Encoded;
+        bool? __pbn__PartitionKeyB64Encoded;
 
         [global::ProtoBuf.ProtoMember(18, Name = @"ordering_key")]
         public byte[] OrderingKey
@@ -284,7 +284,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOrderingKey() => __pbn__OrderingKey != null;
         public void ResetOrderingKey() => __pbn__OrderingKey = null;
-        private byte[] __pbn__OrderingKey;
+        byte[] __pbn__OrderingKey;
 
         [global::ProtoBuf.ProtoMember(19, Name = @"deliver_at_time")]
         public long DeliverAtTime
@@ -294,7 +294,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeDeliverAtTime() => __pbn__DeliverAtTime != null;
         public void ResetDeliverAtTime() => __pbn__DeliverAtTime = null;
-        private long? __pbn__DeliverAtTime;
+        long? __pbn__DeliverAtTime;
 
         [global::ProtoBuf.ProtoMember(20, Name = @"marker_type")]
         public int MarkerType
@@ -304,13 +304,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeMarkerType() => __pbn__MarkerType != null;
         public void ResetMarkerType() => __pbn__MarkerType = null;
-        private int? __pbn__MarkerType;
+        int? __pbn__MarkerType;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class SingleMessageMetadata : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -326,7 +326,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePartitionKey() => __pbn__PartitionKey != null;
         public void ResetPartitionKey() => __pbn__PartitionKey = null;
-        private string __pbn__PartitionKey;
+        string __pbn__PartitionKey;
 
         [global::ProtoBuf.ProtoMember(3, Name = @"payload_size", IsRequired = true)]
         public int PayloadSize { get; set; }
@@ -340,7 +340,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeCompactedOut() => __pbn__CompactedOut != null;
         public void ResetCompactedOut() => __pbn__CompactedOut = null;
-        private bool? __pbn__CompactedOut;
+        bool? __pbn__CompactedOut;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"event_time")]
         [global::System.ComponentModel.DefaultValue(0)]
@@ -351,7 +351,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeEventTime() => __pbn__EventTime != null;
         public void ResetEventTime() => __pbn__EventTime = null;
-        private ulong? __pbn__EventTime;
+        ulong? __pbn__EventTime;
 
         [global::ProtoBuf.ProtoMember(6, Name = @"partition_key_b64_encoded")]
         [global::System.ComponentModel.DefaultValue(false)]
@@ -362,7 +362,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePartitionKeyB64Encoded() => __pbn__PartitionKeyB64Encoded != null;
         public void ResetPartitionKeyB64Encoded() => __pbn__PartitionKeyB64Encoded = null;
-        private bool? __pbn__PartitionKeyB64Encoded;
+        bool? __pbn__PartitionKeyB64Encoded;
 
         [global::ProtoBuf.ProtoMember(7, Name = @"ordering_key")]
         public byte[] OrderingKey
@@ -372,7 +372,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOrderingKey() => __pbn__OrderingKey != null;
         public void ResetOrderingKey() => __pbn__OrderingKey = null;
-        private byte[] __pbn__OrderingKey;
+        byte[] __pbn__OrderingKey;
 
         [global::ProtoBuf.ProtoMember(8, Name = @"sequence_id")]
         public ulong SequenceId
@@ -382,13 +382,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeSequenceId() => __pbn__SequenceId != null;
         public void ResetSequenceId() => __pbn__SequenceId = null;
-        private ulong? __pbn__SequenceId;
+        ulong? __pbn__SequenceId;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandConnect : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -404,7 +404,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAuthMethod() => __pbn__AuthMethod != null;
         public void ResetAuthMethod() => __pbn__AuthMethod = null;
-        private AuthMethod? __pbn__AuthMethod;
+        AuthMethod? __pbn__AuthMethod;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"auth_method_name")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -415,7 +415,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAuthMethodName() => __pbn__AuthMethodName != null;
         public void ResetAuthMethodName() => __pbn__AuthMethodName = null;
-        private string __pbn__AuthMethodName;
+        string __pbn__AuthMethodName;
 
         [global::ProtoBuf.ProtoMember(3, Name = @"auth_data")]
         public byte[] AuthData
@@ -425,7 +425,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAuthData() => __pbn__AuthData != null;
         public void ResetAuthData() => __pbn__AuthData = null;
-        private byte[] __pbn__AuthData;
+        byte[] __pbn__AuthData;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"protocol_version")]
         [global::System.ComponentModel.DefaultValue(0)]
@@ -436,7 +436,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProtocolVersion() => __pbn__ProtocolVersion != null;
         public void ResetProtocolVersion() => __pbn__ProtocolVersion = null;
-        private int? __pbn__ProtocolVersion;
+        int? __pbn__ProtocolVersion;
 
         [global::ProtoBuf.ProtoMember(6, Name = @"proxy_to_broker_url")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -447,7 +447,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProxyToBrokerUrl() => __pbn__ProxyToBrokerUrl != null;
         public void ResetProxyToBrokerUrl() => __pbn__ProxyToBrokerUrl = null;
-        private string __pbn__ProxyToBrokerUrl;
+        string __pbn__ProxyToBrokerUrl;
 
         [global::ProtoBuf.ProtoMember(7, Name = @"original_principal")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -458,7 +458,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalPrincipal() => __pbn__OriginalPrincipal != null;
         public void ResetOriginalPrincipal() => __pbn__OriginalPrincipal = null;
-        private string __pbn__OriginalPrincipal;
+        string __pbn__OriginalPrincipal;
 
         [global::ProtoBuf.ProtoMember(8, Name = @"original_auth_data")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -469,7 +469,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalAuthData() => __pbn__OriginalAuthData != null;
         public void ResetOriginalAuthData() => __pbn__OriginalAuthData = null;
-        private string __pbn__OriginalAuthData;
+        string __pbn__OriginalAuthData;
 
         [global::ProtoBuf.ProtoMember(9, Name = @"original_auth_method")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -480,13 +480,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalAuthMethod() => __pbn__OriginalAuthMethod != null;
         public void ResetOriginalAuthMethod() => __pbn__OriginalAuthMethod = null;
-        private string __pbn__OriginalAuthMethod;
+        string __pbn__OriginalAuthMethod;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandConnected : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -502,7 +502,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProtocolVersion() => __pbn__ProtocolVersion != null;
         public void ResetProtocolVersion() => __pbn__ProtocolVersion = null;
-        private int? __pbn__ProtocolVersion;
+        int? __pbn__ProtocolVersion;
 
         [global::ProtoBuf.ProtoMember(3, Name = @"max_message_size")]
         public int MaxMessageSize
@@ -512,13 +512,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeMaxMessageSize() => __pbn__MaxMessageSize != null;
         public void ResetMaxMessageSize() => __pbn__MaxMessageSize = null;
-        private int? __pbn__MaxMessageSize;
+        int? __pbn__MaxMessageSize;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandAuthResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -531,7 +531,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeClientVersion() => __pbn__ClientVersion != null;
         public void ResetClientVersion() => __pbn__ClientVersion = null;
-        private string __pbn__ClientVersion;
+        string __pbn__ClientVersion;
 
         [global::ProtoBuf.ProtoMember(2, Name = @"response")]
         public AuthData Response { get; set; }
@@ -545,13 +545,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProtocolVersion() => __pbn__ProtocolVersion != null;
         public void ResetProtocolVersion() => __pbn__ProtocolVersion = null;
-        private int? __pbn__ProtocolVersion;
+        int? __pbn__ProtocolVersion;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandAuthChallenge : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -564,7 +564,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeServerVersion() => __pbn__ServerVersion != null;
         public void ResetServerVersion() => __pbn__ServerVersion = null;
-        private string __pbn__ServerVersion;
+        string __pbn__ServerVersion;
 
         [global::ProtoBuf.ProtoMember(2, Name = @"challenge")]
         public AuthData Challenge { get; set; }
@@ -578,13 +578,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProtocolVersion() => __pbn__ProtocolVersion != null;
         public void ResetProtocolVersion() => __pbn__ProtocolVersion = null;
-        private int? __pbn__ProtocolVersion;
+        int? __pbn__ProtocolVersion;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class AuthData : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -597,7 +597,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAuthMethodName() => __pbn__AuthMethodName != null;
         public void ResetAuthMethodName() => __pbn__AuthMethodName = null;
-        private string __pbn__AuthMethodName;
+        string __pbn__AuthMethodName;
 
         [global::ProtoBuf.ProtoMember(2)]
         public byte[] auth_data
@@ -607,13 +607,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeauth_data() => __pbn__auth_data != null;
         public void Resetauth_data() => __pbn__auth_data = null;
-        private byte[] __pbn__auth_data;
+        byte[] __pbn__auth_data;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandSubscribe : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -641,7 +641,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeConsumerName() => __pbn__ConsumerName != null;
         public void ResetConsumerName() => __pbn__ConsumerName = null;
-        private string __pbn__ConsumerName;
+        string __pbn__ConsumerName;
 
         [global::ProtoBuf.ProtoMember(7, Name = @"priority_level")]
         public int PriorityLevel
@@ -651,7 +651,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePriorityLevel() => __pbn__PriorityLevel != null;
         public void ResetPriorityLevel() => __pbn__PriorityLevel = null;
-        private int? __pbn__PriorityLevel;
+        int? __pbn__PriorityLevel;
 
         [global::ProtoBuf.ProtoMember(8, Name = @"durable")]
         [global::System.ComponentModel.DefaultValue(true)]
@@ -662,7 +662,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeDurable() => __pbn__Durable != null;
         public void ResetDurable() => __pbn__Durable = null;
-        private bool? __pbn__Durable;
+        bool? __pbn__Durable;
 
         [global::ProtoBuf.ProtoMember(9, Name = @"start_message_id")]
         public MessageIdData StartMessageId { get; set; }
@@ -678,7 +678,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeReadCompacted() => __pbn__ReadCompacted != null;
         public void ResetReadCompacted() => __pbn__ReadCompacted = null;
-        private bool? __pbn__ReadCompacted;
+        bool? __pbn__ReadCompacted;
 
         [global::ProtoBuf.ProtoMember(12, Name = @"schema")]
         public Schema Schema { get; set; }
@@ -692,7 +692,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeinitialPosition() => __pbn__initialPosition != null;
         public void ResetinitialPosition() => __pbn__initialPosition = null;
-        private InitialPosition? __pbn__initialPosition;
+        InitialPosition? __pbn__initialPosition;
 
         [global::ProtoBuf.ProtoMember(14, Name = @"replicate_subscription_state")]
         public bool ReplicateSubscriptionState
@@ -702,7 +702,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeReplicateSubscriptionState() => __pbn__ReplicateSubscriptionState != null;
         public void ResetReplicateSubscriptionState() => __pbn__ReplicateSubscriptionState = null;
-        private bool? __pbn__ReplicateSubscriptionState;
+        bool? __pbn__ReplicateSubscriptionState;
 
         [global::ProtoBuf.ProtoContract()]
         public enum SubType
@@ -725,7 +725,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandPartitionedTopicMetadata : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -744,7 +744,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalPrincipal() => __pbn__OriginalPrincipal != null;
         public void ResetOriginalPrincipal() => __pbn__OriginalPrincipal = null;
-        private string __pbn__OriginalPrincipal;
+        string __pbn__OriginalPrincipal;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"original_auth_data")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -755,7 +755,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalAuthData() => __pbn__OriginalAuthData != null;
         public void ResetOriginalAuthData() => __pbn__OriginalAuthData = null;
-        private string __pbn__OriginalAuthData;
+        string __pbn__OriginalAuthData;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"original_auth_method")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -766,13 +766,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalAuthMethod() => __pbn__OriginalAuthMethod != null;
         public void ResetOriginalAuthMethod() => __pbn__OriginalAuthMethod = null;
-        private string __pbn__OriginalAuthMethod;
+        string __pbn__OriginalAuthMethod;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandPartitionedTopicMetadataResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -784,7 +784,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializePartitions() => __pbn__Partitions != null;
         public void ResetPartitions() => __pbn__Partitions = null;
-        private uint? __pbn__Partitions;
+        uint? __pbn__Partitions;
 
         [global::ProtoBuf.ProtoMember(2, Name = @"request_id", IsRequired = true)]
         public ulong RequestId { get; set; }
@@ -798,7 +798,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeResponse() => __pbn__Response != null;
         public void ResetResponse() => __pbn__Response = null;
-        private LookupType? __pbn__Response;
+        LookupType? __pbn__Response;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"error")]
         [global::System.ComponentModel.DefaultValue(ServerError.UnknownError)]
@@ -809,7 +809,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeError() => __pbn__Error != null;
         public void ResetError() => __pbn__Error = null;
-        private ServerError? __pbn__Error;
+        ServerError? __pbn__Error;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"message")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -820,7 +820,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeMessage() => __pbn__Message != null;
         public void ResetMessage() => __pbn__Message = null;
-        private string __pbn__Message;
+        string __pbn__Message;
 
         [global::ProtoBuf.ProtoContract()]
         public enum LookupType
@@ -833,7 +833,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandLookupTopic : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -852,7 +852,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAuthoritative() => __pbn__Authoritative != null;
         public void ResetAuthoritative() => __pbn__Authoritative = null;
-        private bool? __pbn__Authoritative;
+        bool? __pbn__Authoritative;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"original_principal")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -863,7 +863,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalPrincipal() => __pbn__OriginalPrincipal != null;
         public void ResetOriginalPrincipal() => __pbn__OriginalPrincipal = null;
-        private string __pbn__OriginalPrincipal;
+        string __pbn__OriginalPrincipal;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"original_auth_data")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -874,7 +874,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalAuthData() => __pbn__OriginalAuthData != null;
         public void ResetOriginalAuthData() => __pbn__OriginalAuthData = null;
-        private string __pbn__OriginalAuthData;
+        string __pbn__OriginalAuthData;
 
         [global::ProtoBuf.ProtoMember(6, Name = @"original_auth_method")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -885,13 +885,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeOriginalAuthMethod() => __pbn__OriginalAuthMethod != null;
         public void ResetOriginalAuthMethod() => __pbn__OriginalAuthMethod = null;
-        private string __pbn__OriginalAuthMethod;
+        string __pbn__OriginalAuthMethod;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandLookupTopicResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -904,7 +904,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializebrokerServiceUrl() => __pbn__brokerServiceUrl != null;
         public void ResetbrokerServiceUrl() => __pbn__brokerServiceUrl = null;
-        private string __pbn__brokerServiceUrl;
+        string __pbn__brokerServiceUrl;
 
         [global::ProtoBuf.ProtoMember(2)]
         [global::System.ComponentModel.DefaultValue("")]
@@ -915,7 +915,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializebrokerServiceUrlTls() => __pbn__brokerServiceUrlTls != null;
         public void ResetbrokerServiceUrlTls() => __pbn__brokerServiceUrlTls = null;
-        private string __pbn__brokerServiceUrlTls;
+        string __pbn__brokerServiceUrlTls;
 
         [global::ProtoBuf.ProtoMember(3, Name = @"response")]
         [global::System.ComponentModel.DefaultValue(LookupType.Redirect)]
@@ -926,7 +926,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeResponse() => __pbn__Response != null;
         public void ResetResponse() => __pbn__Response = null;
-        private LookupType? __pbn__Response;
+        LookupType? __pbn__Response;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"request_id", IsRequired = true)]
         public ulong RequestId { get; set; }
@@ -940,7 +940,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAuthoritative() => __pbn__Authoritative != null;
         public void ResetAuthoritative() => __pbn__Authoritative = null;
-        private bool? __pbn__Authoritative;
+        bool? __pbn__Authoritative;
 
         [global::ProtoBuf.ProtoMember(6, Name = @"error")]
         [global::System.ComponentModel.DefaultValue(ServerError.UnknownError)]
@@ -951,7 +951,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeError() => __pbn__Error != null;
         public void ResetError() => __pbn__Error = null;
-        private ServerError? __pbn__Error;
+        ServerError? __pbn__Error;
 
         [global::ProtoBuf.ProtoMember(7, Name = @"message")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -962,7 +962,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeMessage() => __pbn__Message != null;
         public void ResetMessage() => __pbn__Message = null;
-        private string __pbn__Message;
+        string __pbn__Message;
 
         [global::ProtoBuf.ProtoMember(8, Name = @"proxy_through_service_url")]
         [global::System.ComponentModel.DefaultValue(false)]
@@ -973,7 +973,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProxyThroughServiceUrl() => __pbn__ProxyThroughServiceUrl != null;
         public void ResetProxyThroughServiceUrl() => __pbn__ProxyThroughServiceUrl = null;
-        private bool? __pbn__ProxyThroughServiceUrl;
+        bool? __pbn__ProxyThroughServiceUrl;
 
         [global::ProtoBuf.ProtoContract()]
         public enum LookupType
@@ -987,7 +987,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandProducer : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1009,7 +1009,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeProducerName() => __pbn__ProducerName != null;
         public void ResetProducerName() => __pbn__ProducerName = null;
-        private string __pbn__ProducerName;
+        string __pbn__ProducerName;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"encrypted")]
         [global::System.ComponentModel.DefaultValue(false)]
@@ -1020,7 +1020,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeEncrypted() => __pbn__Encrypted != null;
         public void ResetEncrypted() => __pbn__Encrypted = null;
-        private bool? __pbn__Encrypted;
+        bool? __pbn__Encrypted;
 
         [global::ProtoBuf.ProtoMember(6, Name = @"metadata")]
         public global::System.Collections.Generic.List<KeyValue> Metadatas { get; } = new global::System.Collections.Generic.List<KeyValue>();
@@ -1032,7 +1032,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandSend : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1051,13 +1051,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeNumMessages() => __pbn__NumMessages != null;
         public void ResetNumMessages() => __pbn__NumMessages = null;
-        private int? __pbn__NumMessages;
+        int? __pbn__NumMessages;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandSendReceipt : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1074,7 +1074,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandSendError : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1094,7 +1094,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandMessage : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1113,13 +1113,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeRedeliveryCount() => __pbn__RedeliveryCount != null;
         public void ResetRedeliveryCount() => __pbn__RedeliveryCount = null;
-        private uint? __pbn__RedeliveryCount;
+        uint? __pbn__RedeliveryCount;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandAck : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1141,7 +1141,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializevalidation_error() => __pbn__validation_error != null;
         public void Resetvalidation_error() => __pbn__validation_error = null;
-        private ValidationError? __pbn__validation_error;
+        ValidationError? __pbn__validation_error;
 
         [global::ProtoBuf.ProtoMember(5, Name = @"properties")]
         public global::System.Collections.Generic.List<KeyLongValue> Properties { get; } = new global::System.Collections.Generic.List<KeyLongValue>();
@@ -1167,7 +1167,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandActiveConsumerChange : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1183,13 +1183,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeIsActive() => __pbn__IsActive != null;
         public void ResetIsActive() => __pbn__IsActive = null;
-        private bool? __pbn__IsActive;
+        bool? __pbn__IsActive;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandFlow : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1203,7 +1203,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandUnsubscribe : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1217,7 +1217,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandSeek : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1238,13 +1238,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeMessagePublishTime() => __pbn__MessagePublishTime != null;
         public void ResetMessagePublishTime() => __pbn__MessagePublishTime = null;
-        private ulong? __pbn__MessagePublishTime;
+        ulong? __pbn__MessagePublishTime;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandReachedEndOfTopic : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1255,7 +1255,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandCloseProducer : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1269,7 +1269,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandCloseConsumer : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1283,7 +1283,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandRedeliverUnacknowledgedMessages : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1297,7 +1297,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandSuccess : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1311,7 +1311,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandProducerSuccess : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1330,7 +1330,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeLastSequenceId() => __pbn__LastSequenceId != null;
         public void ResetLastSequenceId() => __pbn__LastSequenceId = null;
-        private long? __pbn__LastSequenceId;
+        long? __pbn__LastSequenceId;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"schema_version")]
         public byte[] SchemaVersion
@@ -1340,13 +1340,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeSchemaVersion() => __pbn__SchemaVersion != null;
         public void ResetSchemaVersion() => __pbn__SchemaVersion = null;
-        private byte[] __pbn__SchemaVersion;
+        byte[] __pbn__SchemaVersion;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandError : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1363,7 +1363,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandPing : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
     }
@@ -1371,7 +1371,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandPong : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
     }
@@ -1379,7 +1379,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandConsumerStats : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1393,7 +1393,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandConsumerStatsResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1409,7 +1409,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeErrorCode() => __pbn__ErrorCode != null;
         public void ResetErrorCode() => __pbn__ErrorCode = null;
-        private ServerError? __pbn__ErrorCode;
+        ServerError? __pbn__ErrorCode;
 
         [global::ProtoBuf.ProtoMember(3, Name = @"error_message")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -1420,7 +1420,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeErrorMessage() => __pbn__ErrorMessage != null;
         public void ResetErrorMessage() => __pbn__ErrorMessage = null;
-        private string __pbn__ErrorMessage;
+        string __pbn__ErrorMessage;
 
         [global::ProtoBuf.ProtoMember(4)]
         public double MsgRateOut
@@ -1430,7 +1430,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializemsgRateOut() => __pbn__msgRateOut != null;
         public void ResetmsgRateOut() => __pbn__msgRateOut = null;
-        private double? __pbn__msgRateOut;
+        double? __pbn__msgRateOut;
 
         [global::ProtoBuf.ProtoMember(5)]
         public double MsgThroughputOut
@@ -1440,7 +1440,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializemsgThroughputOut() => __pbn__msgThroughputOut != null;
         public void ResetmsgThroughputOut() => __pbn__msgThroughputOut = null;
-        private double? __pbn__msgThroughputOut;
+        double? __pbn__msgThroughputOut;
 
         [global::ProtoBuf.ProtoMember(6)]
         public double MsgRateRedeliver
@@ -1450,7 +1450,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializemsgRateRedeliver() => __pbn__msgRateRedeliver != null;
         public void ResetmsgRateRedeliver() => __pbn__msgRateRedeliver = null;
-        private double? __pbn__msgRateRedeliver;
+        double? __pbn__msgRateRedeliver;
 
         [global::ProtoBuf.ProtoMember(7)]
         [global::System.ComponentModel.DefaultValue("")]
@@ -1461,7 +1461,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeconsumerName() => __pbn__consumerName != null;
         public void ResetconsumerName() => __pbn__consumerName = null;
-        private string __pbn__consumerName;
+        string __pbn__consumerName;
 
         [global::ProtoBuf.ProtoMember(8)]
         public ulong AvailablePermits
@@ -1471,7 +1471,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeavailablePermits() => __pbn__availablePermits != null;
         public void ResetavailablePermits() => __pbn__availablePermits = null;
-        private ulong? __pbn__availablePermits;
+        ulong? __pbn__availablePermits;
 
         [global::ProtoBuf.ProtoMember(9)]
         public ulong UnackedMessages
@@ -1481,7 +1481,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeunackedMessages() => __pbn__unackedMessages != null;
         public void ResetunackedMessages() => __pbn__unackedMessages = null;
-        private ulong? __pbn__unackedMessages;
+        ulong? __pbn__unackedMessages;
 
         [global::ProtoBuf.ProtoMember(10)]
         public bool BlockedConsumerOnUnackedMsgs
@@ -1491,7 +1491,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeblockedConsumerOnUnackedMsgs() => __pbn__blockedConsumerOnUnackedMsgs != null;
         public void ResetblockedConsumerOnUnackedMsgs() => __pbn__blockedConsumerOnUnackedMsgs = null;
-        private bool? __pbn__blockedConsumerOnUnackedMsgs;
+        bool? __pbn__blockedConsumerOnUnackedMsgs;
 
         [global::ProtoBuf.ProtoMember(11, Name = @"address")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -1502,7 +1502,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeAddress() => __pbn__Address != null;
         public void ResetAddress() => __pbn__Address = null;
-        private string __pbn__Address;
+        string __pbn__Address;
 
         [global::ProtoBuf.ProtoMember(12)]
         [global::System.ComponentModel.DefaultValue("")]
@@ -1513,7 +1513,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeconnectedSince() => __pbn__connectedSince != null;
         public void ResetconnectedSince() => __pbn__connectedSince = null;
-        private string __pbn__connectedSince;
+        string __pbn__connectedSince;
 
         [global::ProtoBuf.ProtoMember(13, Name = @"type")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -1524,7 +1524,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeType() => __pbn__Type != null;
         public void ResetType() => __pbn__Type = null;
-        private string __pbn__Type;
+        string __pbn__Type;
 
         [global::ProtoBuf.ProtoMember(14)]
         public double MsgRateExpired
@@ -1534,7 +1534,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializemsgRateExpired() => __pbn__msgRateExpired != null;
         public void ResetmsgRateExpired() => __pbn__msgRateExpired = null;
-        private double? __pbn__msgRateExpired;
+        double? __pbn__msgRateExpired;
 
         [global::ProtoBuf.ProtoMember(15)]
         public ulong MsgBacklog
@@ -1544,13 +1544,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializemsgBacklog() => __pbn__msgBacklog != null;
         public void ResetmsgBacklog() => __pbn__msgBacklog = null;
-        private ulong? __pbn__msgBacklog;
+        ulong? __pbn__msgBacklog;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandGetLastMessageId : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1564,7 +1564,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandGetLastMessageIdResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1578,7 +1578,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandGetTopicsOfNamespace : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1597,7 +1597,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializemode() => __pbn__mode != null;
         public void Resetmode() => __pbn__mode = null;
-        private Mode? __pbn__mode;
+        Mode? __pbn__mode;
 
         [global::ProtoBuf.ProtoContract()]
         public enum Mode
@@ -1614,7 +1614,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandGetTopicsOfNamespaceResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1628,7 +1628,7 @@ namespace DotPulsar.Internal.PulsarApi
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandGetSchema : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1646,13 +1646,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeSchemaVersion() => __pbn__SchemaVersion != null;
         public void ResetSchemaVersion() => __pbn__SchemaVersion = null;
-        private byte[] __pbn__SchemaVersion;
+        byte[] __pbn__SchemaVersion;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class CommandGetSchemaResponse : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 
@@ -1668,7 +1668,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeErrorCode() => __pbn__ErrorCode != null;
         public void ResetErrorCode() => __pbn__ErrorCode = null;
-        private ServerError? __pbn__ErrorCode;
+        ServerError? __pbn__ErrorCode;
 
         [global::ProtoBuf.ProtoMember(3, Name = @"error_message")]
         [global::System.ComponentModel.DefaultValue("")]
@@ -1679,7 +1679,7 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeErrorMessage() => __pbn__ErrorMessage != null;
         public void ResetErrorMessage() => __pbn__ErrorMessage = null;
-        private string __pbn__ErrorMessage;
+        string __pbn__ErrorMessage;
 
         [global::ProtoBuf.ProtoMember(4, Name = @"schema")]
         public Schema Schema { get; set; }
@@ -1692,13 +1692,13 @@ namespace DotPulsar.Internal.PulsarApi
         }
         public bool ShouldSerializeSchemaVersion() => __pbn__SchemaVersion != null;
         public void ResetSchemaVersion() => __pbn__SchemaVersion = null;
-        private byte[] __pbn__SchemaVersion;
+        byte[] __pbn__SchemaVersion;
     }
 
     [global::ProtoBuf.ProtoContract()]
     public partial class BaseCommand : global::ProtoBuf.IExtensible
     {
-        private global::ProtoBuf.IExtension __pbn__extensionData;
+        global::ProtoBuf.IExtension __pbn__extensionData;
         global::ProtoBuf.IExtension global::ProtoBuf.IExtensible.GetExtensionObject(bool createIfMissing)
             => global::ProtoBuf.Extensible.GetExtensionObject(ref __pbn__extensionData, createIfMissing);
 

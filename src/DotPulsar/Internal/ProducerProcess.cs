@@ -12,17 +12,17 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading.Tasks;
+    using Abstractions;
+
     public sealed class ProducerProcess : Process
     {
-        private readonly IStateManager<ProducerState> _stateManager;
-        private readonly IProducerChannelFactory _factory;
-        private readonly Producer _producer;
+        readonly IProducerChannelFactory      _factory;
+        readonly Producer                     _producer;
+        readonly IStateManager<ProducerState> _stateManager;
 
         public ProducerProcess(
             Guid correlationId,
@@ -31,8 +31,8 @@ namespace DotPulsar.Internal
             Producer producer) : base(correlationId)
         {
             _stateManager = stateManager;
-            _factory = factory;
-            _producer = producer;
+            _factory      = factory;
+            _producer     = producer;
         }
 
         public override async ValueTask DisposeAsync()
@@ -66,7 +66,7 @@ namespace DotPulsar.Internal
             }
         }
 
-        private async void SetupChannel()
+        async void SetupChannel()
         {
             IProducerChannel? channel = null;
 

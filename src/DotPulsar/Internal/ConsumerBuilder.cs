@@ -12,31 +12,32 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Exceptions;
-
 namespace DotPulsar.Internal
 {
+    using DotPulsar.Abstractions;
+    using DotPulsar.Exceptions;
+
     public sealed class ConsumerBuilder : IConsumerBuilder
     {
-        private readonly IPulsarClient _pulsarClient;
-        private string? _consumerName;
-        private SubscriptionInitialPosition _initialPosition;
-        private int _priorityLevel;
-        private uint _messagePrefetchCount;
-        private bool _readCompacted;
-        private string? _subscriptionName;
-        private SubscriptionType _subscriptionType;
-        private string? _topic;
+        readonly IPulsarClient _pulsarClient;
+
+        string?                     _consumerName;
+        SubscriptionInitialPosition _initialPosition;
+        uint                        _messagePrefetchCount;
+        int                         _priorityLevel;
+        bool                        _readCompacted;
+        string?                     _subscriptionName;
+        SubscriptionType            _subscriptionType;
+        string?                     _topic;
 
         public ConsumerBuilder(IPulsarClient pulsarClient)
         {
-            _pulsarClient = pulsarClient;
-            _initialPosition = ConsumerOptions.DefaultInitialPosition;
-            _priorityLevel = ConsumerOptions.DefaultPriorityLevel;
+            _pulsarClient         = pulsarClient;
+            _initialPosition      = ConsumerOptions.DefaultInitialPosition;
+            _priorityLevel        = ConsumerOptions.DefaultPriorityLevel;
             _messagePrefetchCount = ConsumerOptions.DefaultMessagePrefetchCount;
-            _readCompacted = ConsumerOptions.DefaultReadCompacted;
-            _subscriptionType = ConsumerOptions.DefaultSubscriptionType;
+            _readCompacted        = ConsumerOptions.DefaultReadCompacted;
+            _subscriptionType     = ConsumerOptions.DefaultSubscriptionType;
         }
 
         public IConsumerBuilder ConsumerName(string name)
@@ -97,13 +98,12 @@ namespace DotPulsar.Internal
 
             var options = new ConsumerOptions(_subscriptionName!, _topic!)
             {
-                ConsumerName = _consumerName,
-                InitialPosition = _initialPosition,
+                ConsumerName         = _consumerName,
+                InitialPosition      = _initialPosition,
                 MessagePrefetchCount = _messagePrefetchCount,
-                PriorityLevel = _priorityLevel,
-                ReadCompacted = _readCompacted,
-                SubscriptionType = _subscriptionType
-
+                PriorityLevel        = _priorityLevel,
+                ReadCompacted        = _readCompacted,
+                SubscriptionType     = _subscriptionType
             };
 
             return _pulsarClient.CreateConsumer(options);

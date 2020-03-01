@@ -12,17 +12,17 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading.Tasks;
+    using Abstractions;
+
     public sealed class ReaderProcess : Process
     {
-        private readonly IStateManager<ReaderState> _stateManager;
-        private readonly IReaderChannelFactory _factory;
-        private readonly Reader _reader;
+        readonly IReaderChannelFactory      _factory;
+        readonly Reader                     _reader;
+        readonly IStateManager<ReaderState> _stateManager;
 
         public ReaderProcess(
             Guid correlationId,
@@ -31,11 +31,11 @@ namespace DotPulsar.Internal
             Reader reader) : base(correlationId)
         {
             _stateManager = stateManager;
-            _factory = factory;
-            _reader = reader;
+            _factory      = factory;
+            _reader       = reader;
         }
 
-        public async override ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
             _stateManager.SetState(ReaderState.Closed);
             CancellationTokenSource.Cancel();
@@ -69,7 +69,7 @@ namespace DotPulsar.Internal
             }
         }
 
-        private async void SetupChannel()
+        async void SetupChannel()
         {
             IReaderChannel? channel = null;
 

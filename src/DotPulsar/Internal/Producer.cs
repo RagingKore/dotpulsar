@@ -12,24 +12,24 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Events;
-using System;
-using System.Buffers;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Buffers;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using DotPulsar.Abstractions;
+    using Events;
+
     public sealed class Producer : IProducer
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private IProducerChannel _channel;
-        private readonly IExecute _executor;
-        private readonly IStateChanged<ProducerState> _state;
-        private int _isDisposed;
+        readonly Guid                         _correlationId;
+        readonly IRegisterEvent               _eventRegister;
+        readonly IExecute                     _executor;
+        readonly IStateChanged<ProducerState> _state;
+        IProducerChannel             _channel;
+        int                          _isDisposed;
 
         public Producer(
             Guid correlationId,
@@ -40,10 +40,10 @@ namespace DotPulsar.Internal
         {
             _correlationId = correlationId;
             _eventRegister = registerEvent;
-            _channel = initialChannel;
-            _executor = executor;
-            _state = state;
-            _isDisposed = 0;
+            _channel       = initialChannel;
+            _executor      = executor;
+            _state         = state;
+            _isDisposed    = 0;
 
             _eventRegister.Register(new ProducerCreated(_correlationId, this));
         }
@@ -99,7 +99,7 @@ namespace DotPulsar.Internal
             _channel = channel;
         }
 
-        private void ThrowIfDisposed()
+        void ThrowIfDisposed()
         {
             if (_isDisposed != 0)
                 throw new ObjectDisposedException(nameof(Producer));

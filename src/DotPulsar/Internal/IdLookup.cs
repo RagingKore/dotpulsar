@@ -12,23 +12,23 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
-
 namespace DotPulsar.Internal
 {
+    using System.Collections.Generic;
+
     public sealed class IdLookup<T> where T : class
     {
-        private T?[] _items;
+        T?[] _items;
 
         public IdLookup() => _items = new T[1];
+
+        public T? this[ulong id] => _items[(int) id];
 
         public bool IsEmpty()
         {
             for (var i = 0; i < _items.Length; ++i)
-            {
                 if (_items[i] != null)
                     return false;
-            }
 
             return true;
         }
@@ -41,42 +41,40 @@ namespace DotPulsar.Internal
                     continue;
 
                 _items[i] = item;
-                return (ulong)i;
+                return (ulong) i;
             }
 
             var newArray = new T[_items.Length + 1];
             _items.CopyTo(newArray, 0);
             var id = newArray.Length - 1;
             newArray[id] = item;
-            _items = newArray;
-            return (ulong)id;
+            _items       = newArray;
+            return (ulong) id;
         }
 
         public T? Remove(ulong id)
         {
-            var item = _items[(int)id];
-            _items[(int)id] = null;
+            var item = _items[(int) id];
+            _items[(int) id] = null;
             return item;
         }
 
         public T[] RemoveAll()
         {
             var items = new List<T>();
+
             for (var i = 0; i < _items.Length; ++i)
             {
                 var item = _items[i];
+
                 if (item != null)
                 {
                     items.Add(item);
                     _items[i] = null;
                 }
             }
-            return items.ToArray();
-        }
 
-        public T? this[ulong id]
-        {
-            get => _items[(int)id];
+            return items.ToArray();
         }
     }
 }

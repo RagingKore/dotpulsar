@@ -12,37 +12,39 @@
  * limitations under the License.
  */
 
-using System;
-using System.IO;
-using System.Net;
-using System.Net.Security;
-using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.IO;
+    using System.Net;
+    using System.Net.Security;
+    using System.Net.Sockets;
+    using System.Security.Authentication;
+    using System.Security.Cryptography.X509Certificates;
+    using System.Threading.Tasks;
+
     public sealed class Connector
     {
-        private readonly X509Certificate2Collection _clientCertificates;
-        private readonly X509Certificate2? _trustedCertificateAuthority;
-        private readonly bool _verifyCertificateAuthority;
-        private readonly bool _verifyCertificateName;
+        readonly X509Certificate2Collection _clientCertificates;
+        readonly X509Certificate2?          _trustedCertificateAuthority;
+        readonly bool                       _verifyCertificateAuthority;
+        readonly bool                       _verifyCertificateName;
 
-        public Connector(X509Certificate2Collection clientCertificates, X509Certificate2? trustedCertificateAuthority, bool verifyCertificateAuthority, bool verifyCertificateName)
+        public Connector(
+            X509Certificate2Collection clientCertificates, X509Certificate2? trustedCertificateAuthority, bool verifyCertificateAuthority,
+            bool verifyCertificateName)
         {
-            _clientCertificates = clientCertificates;
+            _clientCertificates          = clientCertificates;
             _trustedCertificateAuthority = trustedCertificateAuthority;
-            _verifyCertificateAuthority = verifyCertificateAuthority;
-            _verifyCertificateName = verifyCertificateName;
+            _verifyCertificateAuthority  = verifyCertificateAuthority;
+            _verifyCertificateName       = verifyCertificateName;
         }
 
         public async Task<Stream> Connect(Uri serviceUrl)
         {
-            var scheme = serviceUrl.Scheme;
-            var host = serviceUrl.Host;
-            var port = serviceUrl.Port;
+            var scheme  = serviceUrl.Scheme;
+            var host    = serviceUrl.Host;
+            var port    = serviceUrl.Port;
             var encrypt = scheme == Constants.PulsarSslScheme;
 
             if (port == -1)
@@ -56,7 +58,7 @@ namespace DotPulsar.Internal
             return stream;
         }
 
-        private async Task<Stream> GetStream(string host, int port)
+        async Task<Stream> GetStream(string host, int port)
         {
             var tcpClient = new TcpClient();
 
@@ -78,13 +80,13 @@ namespace DotPulsar.Internal
             }
         }
 
-        private async Task<Stream> EncryptStream(Stream stream, string host)
+        async Task<Stream> EncryptStream(Stream stream, string host)
         {
             SslStream? sslStream = null;
 
             try
             {
-                sslStream = new SslStream(stream, false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+                sslStream = new SslStream(stream, false, ValidateServerCertificate, null);
                 await sslStream.AuthenticateAsClientAsync(host, _clientCertificates, SslProtocols.None, true);
                 return sslStream;
             }
@@ -99,7 +101,7 @@ namespace DotPulsar.Internal
             }
         }
 
-        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             if (sslPolicyErrors == SslPolicyErrors.None)
                 return true;
@@ -116,12 +118,10 @@ namespace DotPulsar.Internal
                     return false;
 
                 chain.ChainPolicy.ExtraStore.Add(_trustedCertificateAuthority);
-                _ = chain.Build((X509Certificate2)certificate);
+                _ = chain.Build((X509Certificate2) certificate);
                 for (var i = 0; i < chain.ChainElements.Count; i++)
-                {
                     if (chain.ChainElements[i].Certificate.Thumbprint == _trustedCertificateAuthority.Thumbprint)
                         return true;
-                }
 
                 return false;
             }

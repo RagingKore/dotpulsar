@@ -12,23 +12,23 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using PulsarApi;
+
     public sealed class ConsumerChannelFactory : IConsumerChannelFactory
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private readonly IConnectionPool _connectionPool;
-        private readonly IExecute _executor;
-        private readonly CommandSubscribe _subscribe;
-        private readonly uint _messagePrefetchCount;
-        private readonly BatchHandler _batchHandler;
+        readonly BatchHandler     _batchHandler;
+        readonly IConnectionPool  _connectionPool;
+        readonly Guid             _correlationId;
+        readonly IRegisterEvent   _eventRegister;
+        readonly IExecute         _executor;
+        readonly uint             _messagePrefetchCount;
+        readonly CommandSubscribe _subscribe;
 
         public ConsumerChannelFactory(
             Guid correlationId,
@@ -37,21 +37,21 @@ namespace DotPulsar.Internal
             IExecute executor,
             ConsumerOptions options)
         {
-            _correlationId = correlationId;
-            _eventRegister = eventRegister;
-            _connectionPool = connectionPool;
-            _executor = executor;
+            _correlationId        = correlationId;
+            _eventRegister        = eventRegister;
+            _connectionPool       = connectionPool;
+            _executor             = executor;
             _messagePrefetchCount = options.MessagePrefetchCount;
 
             _subscribe = new CommandSubscribe
             {
-                ConsumerName = options.ConsumerName,
-                initialPosition = (CommandSubscribe.InitialPosition)options.InitialPosition,
-                PriorityLevel = options.PriorityLevel,
-                ReadCompacted = options.ReadCompacted,
-                Subscription = options.SubscriptionName,
-                Topic = options.Topic,
-                Type = (CommandSubscribe.SubType)options.SubscriptionType
+                ConsumerName    = options.ConsumerName,
+                initialPosition = (CommandSubscribe.InitialPosition) options.InitialPosition,
+                PriorityLevel   = options.PriorityLevel,
+                ReadCompacted   = options.ReadCompacted,
+                Subscription    = options.SubscriptionName,
+                Topic           = options.Topic,
+                Type            = (CommandSubscribe.SubType) options.SubscriptionType
             };
 
             _batchHandler = new BatchHandler(true);
@@ -60,12 +60,12 @@ namespace DotPulsar.Internal
         public async Task<IConsumerChannel> Create(CancellationToken cancellationToken)
             => await _executor.Execute(() => GetChannel(cancellationToken), cancellationToken);
 
-        private async ValueTask<IConsumerChannel> GetChannel(CancellationToken cancellationToken)
+        async ValueTask<IConsumerChannel> GetChannel(CancellationToken cancellationToken)
         {
-            var connection = await _connectionPool.FindConnectionForTopic(_subscribe.Topic, cancellationToken);
+            var connection   = await _connectionPool.FindConnectionForTopic(_subscribe.Topic, cancellationToken);
             var messageQueue = new AsyncQueue<MessagePackage>();
-            var channel = new Channel(_correlationId, _eventRegister, messageQueue);
-            var response = await connection.Send(_subscribe, channel);
+            var channel      = new Channel(_correlationId, _eventRegister, messageQueue);
+            var response     = await connection.Send(_subscribe, channel);
             return new ConsumerChannel(response.ConsumerId, _messagePrefetchCount, messageQueue, connection, _batchHandler);
         }
     }

@@ -12,28 +12,29 @@
  * limitations under the License.
  */
 
-using System.Buffers;
-
 namespace DotPulsar.Internal.Extensions
 {
+    using System.Buffers;
+    using PulsarApi;
+
     public static class MessagePackageExtensions
     {
         public static uint GetMetadataSize(this MessagePackage package)
-            => package.Data.ReadUInt32(6, true);  //TODO RK: 6 should be a constant
+            => package.Data.ReadUInt32(6, true); //TODO RK: 6 should be a constant
 
         public static ReadOnlySequence<byte> ExtractData(this MessagePackage package, uint metadataSize)
             => package.Data.Slice(10 + metadataSize); //TODO RK: 10 should be a constant
 
-        public static PulsarApi.MessageMetadata ExtractMetadata(this MessagePackage package, uint metadataSize)
-            => Serializer.Deserialize<PulsarApi.MessageMetadata>(package.Data.Slice(10, metadataSize)); //TODO RK: 10 should be a constant
+        public static MessageMetadata ExtractMetadata(this MessagePackage package, uint metadataSize)
+            => Serializer.Deserialize<MessageMetadata>(package.Data.Slice(10, metadataSize)); //TODO RK: 10 should be a constant
 
         public static bool IsValid(this MessagePackage package)
             => StartsWithMagicNumber(package.Data) && HasValidCheckSum(package.Data);
 
-        private static bool StartsWithMagicNumber(ReadOnlySequence<byte> input)
+        static bool StartsWithMagicNumber(ReadOnlySequence<byte> input)
             => input.StartsWith(Constants.MagicNumber);
 
-        private static bool HasValidCheckSum(ReadOnlySequence<byte> input)
+        static bool HasValidCheckSum(ReadOnlySequence<byte> input)
             => input.ReadUInt32(2, true) == Crc32C.Calculate(input.Slice(6));
     }
 }

@@ -12,20 +12,20 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.PulsarApi;
-
 namespace DotPulsar.Internal
 {
+    using Abstractions;
+    using PulsarApi;
+
     public sealed class PingPongHandler
     {
-        private readonly IConnection _connection;
-        private readonly CommandPong _pong;
+        readonly IConnection _connection;
+        readonly CommandPong _pong;
 
         public PingPongHandler(IConnection connection)
         {
             _connection = connection;
-            _pong = new CommandPong();
+            _pong       = new CommandPong();
         }
 
         public void Incoming(CommandPing ping)

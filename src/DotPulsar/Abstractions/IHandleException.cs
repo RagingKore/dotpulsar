@@ -12,17 +12,17 @@
  * limitations under the License.
  */
 
-using System.Threading.Tasks;
-
 namespace DotPulsar.Abstractions
 {
+    using System.Threading.Tasks;
+
     /// <summary>
-    /// An exception handling abstraction.
+    ///     An exception handling abstraction.
     /// </summary>
     public interface IHandleException
     {
         /// <summary>
-        /// Called after an action has thrown an Exception.
+        ///     Called after an action has thrown an Exception.
         /// </summary>
         ValueTask OnException(ExceptionContext exceptionContext);
     }

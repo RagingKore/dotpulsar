@@ -12,22 +12,22 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+
     public sealed class StateManager<TState> : IStateManager<TState> where TState : notnull
     {
-        private readonly object _lock;
-        private readonly StateTaskCollection<TState> _stateTasks;
-        private readonly TState[] _finalStates;
+        readonly TState[]                    _finalStates;
+        readonly object                      _lock;
+        readonly StateTaskCollection<TState> _stateTasks;
 
         public StateManager(TState initialState, params TState[] finalStates)
         {
-            _lock = new object();
-            _stateTasks = new StateTaskCollection<TState>();
+            _lock        = new object();
+            _stateTasks  = new StateTaskCollection<TState>();
             _finalStates = finalStates;
             CurrentState = initialState;
         }
@@ -59,6 +59,7 @@ namespace DotPulsar.Internal
             {
                 if (IsFinalState(CurrentState) || CurrentState.Equals(state))
                     return new ValueTask<TState>(CurrentState);
+
                 return new ValueTask<TState>(_stateTasks.CreateTaskFor(state, StateChanged.To, cancellationToken));
             }
         }
@@ -69,6 +70,7 @@ namespace DotPulsar.Internal
             {
                 if (IsFinalState(CurrentState) || !CurrentState.Equals(state))
                     return new ValueTask<TState>(CurrentState);
+
                 return new ValueTask<TState>(_stateTasks.CreateTaskFor(state, StateChanged.From, cancellationToken));
             }
         }
@@ -76,10 +78,8 @@ namespace DotPulsar.Internal
         public bool IsFinalState(TState state)
         {
             for (var i = 0; i < _finalStates.Length; ++i)
-            {
                 if (_finalStates[i].Equals(state))
                     return true;
-            }
 
             return false;
         }

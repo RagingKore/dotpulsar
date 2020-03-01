@@ -12,21 +12,21 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+
     public sealed class AsyncLockExecutor : IExecute, IAsyncDisposable
     {
-        private readonly AsyncLock _lock;
-        private readonly IExecute _executor;
+        readonly IExecute  _executor;
+        readonly AsyncLock _lock;
 
         public AsyncLockExecutor(IExecute executor)
         {
-            _lock = new AsyncLock();
+            _lock     = new AsyncLock();
             _executor = executor;
         }
 

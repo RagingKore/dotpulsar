@@ -12,27 +12,27 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Events;
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using DotPulsar.Abstractions;
+    using Events;
+    using PulsarApi;
+
     public sealed class Consumer : IConsumer
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private IConsumerChannel _channel;
-        private readonly CommandAck _cachedCommandAck;
-        private readonly IExecute _executor;
-        private readonly IStateChanged<ConsumerState> _state;
-        private int _isDisposed;
+        readonly CommandAck                   _cachedCommandAck;
+        readonly Guid                         _correlationId;
+        readonly IRegisterEvent               _eventRegister;
+        readonly IExecute                     _executor;
+        readonly IStateChanged<ConsumerState> _state;
+        IConsumerChannel             _channel;
+        int                          _isDisposed;
 
         public Consumer(
             Guid correlationId,
@@ -41,13 +41,13 @@ namespace DotPulsar.Internal
             IExecute executor,
             IStateChanged<ConsumerState> state)
         {
-            _correlationId = correlationId;
-            _eventRegister = eventRegister;
-            _channel = initialChannel;
-            _executor = executor;
-            _state = state;
+            _correlationId    = correlationId;
+            _eventRegister    = eventRegister;
+            _channel          = initialChannel;
+            _executor         = executor;
+            _state            = state;
             _cachedCommandAck = new CommandAck();
-            _isDisposed = 0;
+            _isDisposed       = 0;
 
             _eventRegister.Register(new ConsumerCreated(_correlationId, this));
         }
@@ -76,9 +76,7 @@ namespace DotPulsar.Internal
             ThrowIfDisposed();
 
             while (!cancellationToken.IsCancellationRequested)
-            {
                 yield return await _executor.Execute(() => _channel.Receive(cancellationToken), cancellationToken);
-            }
         }
 
         public async ValueTask Acknowledge(Message message, CancellationToken cancellationToken)
@@ -102,9 +100,7 @@ namespace DotPulsar.Internal
         public async ValueTask Seek(MessageId messageId, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            var seek = new CommandSeek { MessageId = messageId.Data };
-            _ = await _executor.Execute(() => _channel.Send(seek), cancellationToken);
-            return;
+            _ = await _executor.Execute(() => _channel.Send(new CommandSeek { MessageId = messageId.Data }), cancellationToken);
         }
 
         public async ValueTask<MessageId> GetLastMessageId(CancellationToken cancellationToken)
@@ -114,16 +110,18 @@ namespace DotPulsar.Internal
             return new MessageId(response.LastMessageId);
         }
 
-        private async ValueTask Acknowledge(MessageIdData messageIdData, CommandAck.AckType ackType, CancellationToken cancellationToken)
+        async ValueTask Acknowledge(MessageIdData messageIdData, CommandAck.AckType ackType, CancellationToken cancellationToken)
         {
             ThrowIfDisposed();
-            await _executor.Execute(() =>
-            {
-                _cachedCommandAck.Type = ackType;
-                _cachedCommandAck.MessageIds.Clear();
-                _cachedCommandAck.MessageIds.Add(messageIdData);
-                return _channel.Send(_cachedCommandAck);
-            }, cancellationToken);
+            await _executor.Execute(
+                () =>
+                {
+                    _cachedCommandAck.Type = ackType;
+                    _cachedCommandAck.MessageIds.Clear();
+                    _cachedCommandAck.MessageIds.Add(messageIdData);
+                    return _channel.Send(_cachedCommandAck);
+                }, cancellationToken
+            );
         }
 
         internal void SetChannel(IConsumerChannel channel)
@@ -132,7 +130,7 @@ namespace DotPulsar.Internal
             _channel = channel;
         }
 
-        private void ThrowIfDisposed()
+        void ThrowIfDisposed()
         {
             if (_isDisposed != 0)
                 throw new ObjectDisposedException(GetType().FullName);

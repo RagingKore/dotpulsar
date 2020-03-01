@@ -18,11 +18,11 @@ namespace DotPulsar.Internal
     {
         public ProducerResponse(ulong producerId, string producerName)
         {
-            ProducerId = producerId;
+            ProducerId   = producerId;
             ProducerName = producerName;
         }
 
-        public ulong ProducerId { get; }
+        public ulong  ProducerId   { get; }
         public string ProducerName { get; }
     }
 }

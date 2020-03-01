@@ -1,12 +1,12 @@
-﻿using DotPulsar.Abstractions;
-using System;
-using System.Threading.Tasks;
-
-namespace DotPulsar.Internal
+﻿namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading.Tasks;
+    using DotPulsar.Abstractions;
+
     public sealed class FuncExceptionHandler : IHandleException
     {
-        private readonly Func<ExceptionContext, ValueTask> _exceptionHandler;
+        readonly Func<ExceptionContext, ValueTask> _exceptionHandler;
 
         public FuncExceptionHandler(Func<ExceptionContext, ValueTask> exceptionHandler) => _exceptionHandler = exceptionHandler;
 

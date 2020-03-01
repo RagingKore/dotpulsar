@@ -12,45 +12,44 @@
  * limitations under the License.
  */
 
-using System.Diagnostics.Tracing;
-using System.Threading;
-
 namespace DotPulsar.Internal
 {
+    using System.Diagnostics.Tracing;
+    using System.Threading;
+
 #if NETSTANDARD2_1
     public sealed class DotPulsarEventSource : EventSource
     {
-        private readonly PollingCounter _totalClientsCounter;
-        private long _totalClients;
-
-        private readonly PollingCounter _currentClientsCounter;
-        private long _currentClients;
-
-        private readonly PollingCounter _totalConnectionsCounter;
-        private long _totalConnections;
-
-        private readonly PollingCounter _currentConnectionsCounter;
-        private long _currentConnections;
-
-        private readonly PollingCounter _totalConsumersCounter;
-        private long _totalConsumers;
-
-        private readonly PollingCounter _currentConsumersCounter;
-        private long _currentConsumers;
-
-        private readonly PollingCounter _totalProducersCounter;
-        private long _totalProducers;
-
-        private readonly PollingCounter _currentProducersCounter;
-        private long _currentProducers;
-
-        private readonly PollingCounter _totalReadersCounter;
-        private long _totalReaders;
-
-        private readonly PollingCounter _currentReadersCounter;
-        private long _currentReaders;
-
         public static readonly DotPulsarEventSource Log = new DotPulsarEventSource();
+
+        readonly PollingCounter _currentClientsCounter;
+
+        readonly PollingCounter _currentConnectionsCounter;
+
+        readonly PollingCounter _currentConsumersCounter;
+
+        readonly PollingCounter _currentProducersCounter;
+
+        readonly PollingCounter _currentReadersCounter;
+        readonly PollingCounter _totalClientsCounter;
+
+        readonly PollingCounter _totalConnectionsCounter;
+
+        readonly PollingCounter _totalConsumersCounter;
+
+        readonly PollingCounter _totalProducersCounter;
+
+        readonly PollingCounter _totalReadersCounter;
+        long           _currentClients;
+        long           _currentConnections;
+        long           _currentConsumers;
+        long           _currentProducers;
+        long           _currentReaders;
+        long           _totalClients;
+        long           _totalConnections;
+        long           _totalConsumers;
+        long           _totalProducers;
+        long           _totalReaders;
 
         public DotPulsarEventSource() : base("DotPulsar")
         {

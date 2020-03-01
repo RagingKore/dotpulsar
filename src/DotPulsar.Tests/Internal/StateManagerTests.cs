@@ -67,7 +67,7 @@ namespace DotPulsar.Tests.Internal
         public void SetState_GivenStateIsChangedToWanted_ShouldCompleteTask(ProducerState initialState, ProducerState newState)
         {
             //Arrange
-            var sut = new StateManager<ProducerState>(initialState, ProducerState.Closed);
+            var sut  = new StateManager<ProducerState>(initialState, ProducerState.Closed);
             var task = sut.StateChangedTo(newState, default);
 
             //Act
@@ -85,7 +85,7 @@ namespace DotPulsar.Tests.Internal
         public void SetState_GivenStateIsChangedFromWanted_ShouldCompleteTask(ProducerState initialState, ProducerState newState)
         {
             //Arrange
-            var sut = new StateManager<ProducerState>(initialState, ProducerState.Closed);
+            var sut  = new StateManager<ProducerState>(initialState, ProducerState.Closed);
             var task = sut.StateChangedFrom(initialState, default);
 
             //Act
@@ -210,7 +210,8 @@ namespace DotPulsar.Tests.Internal
         [Theory]
         [InlineData(ProducerState.Connected, ProducerState.Disconnected, ProducerState.Closed)]
         [InlineData(ProducerState.Disconnected, ProducerState.Connected, ProducerState.Closed)]
-        public void SetState_GivenStateIsChangedToNotWanted_ShouldNotCompleteTask(ProducerState initialState, ProducerState newState, ProducerState wantedState)
+        public void SetState_GivenStateIsChangedToNotWanted_ShouldNotCompleteTask(
+            ProducerState initialState, ProducerState newState, ProducerState wantedState)
         {
             //Arrange
             var sut = new StateManager<ProducerState>(initialState, ProducerState.Closed);
@@ -227,8 +228,8 @@ namespace DotPulsar.Tests.Internal
         public async Task CancelToken_GivenTaskWasStillWaiting_ShouldCancelTask()
         {
             //Arrange
-            var sut = new StateManager<ProducerState>(ProducerState.Connected, ProducerState.Closed);
-            var cts = new CancellationTokenSource();
+            var sut  = new StateManager<ProducerState>(ProducerState.Connected, ProducerState.Closed);
+            var cts  = new CancellationTokenSource();
             var task = sut.StateChangedFrom(ProducerState.Connected, cts.Token);
 
             //Act

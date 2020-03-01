@@ -12,20 +12,20 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System;
-
 namespace DotPulsar.Internal.Events
 {
+    using System;
+    using Abstractions;
+
     public sealed class ConsumerDisposed : IEvent
     {
         public ConsumerDisposed(Guid correlationId, Consumer consumer)
         {
             CorrelationId = correlationId;
-            Consumer = consumer;
+            Consumer      = consumer;
         }
 
-        public Guid CorrelationId { get; }
-        public Consumer Consumer { get; }
+        public Consumer Consumer      { get; }
+        public Guid     CorrelationId { get; }
     }
 }

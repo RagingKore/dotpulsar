@@ -12,34 +12,34 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Extensions;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Pipelines;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Buffers;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.IO.Pipelines;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using Extensions;
+
     public sealed class PulsarStream : IPulsarStream
     {
-        private const long PauseAtMoreThan10Mb = 10485760;
-        private const long ResumeAt5MbOrLess = 5242881;
+        const    long       PauseAtMoreThan10Mb = 10485760;
+        const    long       ResumeAt5MbOrLess   = 5242881;
+        readonly PipeReader _reader;
 
-        private readonly Stream _stream;
-        private readonly PipeReader _reader;
-        private readonly PipeWriter _writer;
-        private int _isDisposed;
+        readonly Stream     _stream;
+        readonly PipeWriter _writer;
+        int        _isDisposed;
 
         public PulsarStream(Stream stream)
         {
             _stream = stream;
             var options = new PipeOptions(pauseWriterThreshold: PauseAtMoreThan10Mb, resumeWriterThreshold: ResumeAt5MbOrLess);
-            var pipe = new Pipe(options);
+            var pipe    = new Pipe(options);
             _reader = pipe.Reader;
             _writer = pipe.Writer;
         }
@@ -55,10 +55,7 @@ namespace DotPulsar.Internal
                 await _stream.WriteAsync(data, 0, data.Length);
             }
 #else
-            foreach (var segment in sequence)
-            {
-                await _stream.WriteAsync(segment);
-            }
+            foreach (var segment in sequence) await _stream.WriteAsync(segment);
 #endif
         }
 
@@ -74,40 +71,6 @@ namespace DotPulsar.Internal
 #else
             await _stream.DisposeAsync();
 #endif
-        }
-
-        private async Task FillPipe(CancellationToken cancellationToken)
-        {
-            await Task.Yield();
-
-            try
-            {
-#if NETSTANDARD2_0
-                var buffer = new byte[84999];
-#endif
-                while (true)
-                {
-                    var memory = _writer.GetMemory(84999); // LOH - 1 byte
-#if NETSTANDARD2_0
-                    var bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-                    new Memory<byte>(buffer, 0, bytesRead).CopyTo(memory);
-#else
-                    var bytesRead = await _stream.ReadAsync(memory, cancellationToken);
-#endif
-                    if (bytesRead == 0)
-                        break;
-
-                    _writer.Advance(bytesRead);
-
-                    var result = await _writer.FlushAsync(cancellationToken);
-                    if (result.IsCompleted)
-                        break;
-                }
-            }
-            finally
-            {
-                _writer.Complete();
-            }
         }
 
         public async IAsyncEnumerable<ReadOnlySequence<byte>> Frames([EnumeratorCancellation] CancellationToken cancellationToken)
@@ -150,7 +113,41 @@ namespace DotPulsar.Internal
             }
         }
 
-        private void ThrowIfDisposed()
+        async Task FillPipe(CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+
+            try
+            {
+#if NETSTANDARD2_0
+                var buffer = new byte[84999];
+#endif
+                while (true)
+                {
+                    var memory = _writer.GetMemory(84999); // LOH - 1 byte
+#if NETSTANDARD2_0
+                    var bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                    new Memory<byte>(buffer, 0, bytesRead).CopyTo(memory);
+#else
+                    var bytesRead = await _stream.ReadAsync(memory, cancellationToken);
+#endif
+                    if (bytesRead == 0)
+                        break;
+
+                    _writer.Advance(bytesRead);
+
+                    var result = await _writer.FlushAsync(cancellationToken);
+                    if (result.IsCompleted)
+                        break;
+                }
+            }
+            finally
+            {
+                _writer.Complete();
+            }
+        }
+
+        void ThrowIfDisposed()
         {
             if (_isDisposed != 0)
                 throw new ObjectDisposedException(nameof(PulsarStream));

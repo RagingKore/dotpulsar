@@ -12,21 +12,21 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Exceptions;
-
 namespace DotPulsar.Internal
 {
+    using DotPulsar.Abstractions;
+    using DotPulsar.Exceptions;
+
     public sealed class ProducerBuilder : IProducerBuilder
     {
-        private readonly IPulsarClient _pulsarClient;
-        private string? _producerName;
-        private ulong _initialSequenceId;
-        private string? _topic;
+        readonly IPulsarClient _pulsarClient;
+        ulong         _initialSequenceId;
+        string?       _producerName;
+        string?       _topic;
 
         public ProducerBuilder(IPulsarClient pulsarClient)
         {
-            _pulsarClient = pulsarClient;
+            _pulsarClient      = pulsarClient;
             _initialSequenceId = ProducerOptions.DefaultInitialSequenceId;
         }
 
@@ -56,7 +56,7 @@ namespace DotPulsar.Internal
             var options = new ProducerOptions(_topic!)
             {
                 InitialSequenceId = _initialSequenceId,
-                ProducerName = _producerName
+                ProducerName      = _producerName
             };
 
             return _pulsarClient.CreateProducer(options);

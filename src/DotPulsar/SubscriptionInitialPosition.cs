@@ -16,7 +16,7 @@ namespace DotPulsar
 {
     public enum SubscriptionInitialPosition : byte
     {
-        Latest = 0,
+        Latest   = 0,
         Earliest = 1
     }
 }

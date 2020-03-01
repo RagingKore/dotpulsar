@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-using System;
-
 namespace DotPulsar.Internal.Abstractions
 {
+    using System;
+
     public interface IEvent
     {
         Guid CorrelationId { get; }

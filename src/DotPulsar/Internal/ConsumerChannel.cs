@@ -12,24 +12,24 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Extensions;
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using Extensions;
+    using PulsarApi;
+
     public sealed class ConsumerChannel : IConsumerChannel, IReaderChannel
     {
-        private readonly ulong _id;
-        private readonly AsyncQueue<MessagePackage> _queue;
-        private readonly IConnection _connection;
-        private readonly BatchHandler _batchHandler;
-        private readonly CommandFlow _cachedCommandFlow;
-        private uint _sendWhenZero;
-        private bool _firstFlow;
+        readonly BatchHandler               _batchHandler;
+        readonly CommandFlow                _cachedCommandFlow;
+        readonly IConnection                _connection;
+        readonly ulong                      _id;
+        readonly AsyncQueue<MessagePackage> _queue;
+        bool                       _firstFlow;
+        uint                       _sendWhenZero;
 
         public ConsumerChannel(
             ulong id,
@@ -38,13 +38,13 @@ namespace DotPulsar.Internal
             IConnection connection,
             BatchHandler batchHandler)
         {
-            _id = id;
-            _queue = queue;
-            _connection = connection;
-            _batchHandler = batchHandler;
+            _id                = id;
+            _queue             = queue;
+            _connection        = connection;
+            _batchHandler      = batchHandler;
             _cachedCommandFlow = new CommandFlow { ConsumerId = id, MessagePermits = messagePrefetchCount };
-            _sendWhenZero = 0;
-            _firstFlow = true;
+            _sendWhenZero      = 0;
+            _firstFlow         = true;
         }
 
         public async ValueTask<Message> Receive(CancellationToken cancellationToken)
@@ -69,9 +69,9 @@ namespace DotPulsar.Internal
                 }
 
                 var metadataSize = messagePackage.GetMetadataSize();
-                var data = messagePackage.ExtractData(metadataSize);
-                var metadata = messagePackage.ExtractMetadata(metadataSize);
-                var messageId = messagePackage.MessageId;
+                var data         = messagePackage.ExtractData(metadataSize);
+                var metadata     = messagePackage.ExtractMetadata(metadataSize);
+                var messageId    = messagePackage.MessageId;
 
                 return metadata.NumMessagesInBatch == 1
                     ? new Message(new MessageId(messageId), metadata, null, data)
@@ -82,6 +82,7 @@ namespace DotPulsar.Internal
         public async Task Send(CommandAck command)
         {
             var messageId = command.MessageIds[0];
+
             if (messageId.BatchIndex != -1)
             {
                 var batchMessageId = _batchHandler.Acknowledge(messageId);
@@ -133,24 +134,26 @@ namespace DotPulsar.Internal
             }
         }
 
-        private async ValueTask SendFlow()
+        async ValueTask SendFlow()
         {
-            await _connection.Send(_cachedCommandFlow); //TODO Should sending the flow command be handled on another thread and thereby not slow down the consumer?
+            await _connection.Send(
+                _cachedCommandFlow
+            ); //TODO Should sending the flow command be handled on another thread and thereby not slow down the consumer?
 
             if (_firstFlow)
             {
-                _cachedCommandFlow.MessagePermits = (uint)Math.Ceiling(_cachedCommandFlow.MessagePermits * 0.5);
-                _firstFlow = false;
+                _cachedCommandFlow.MessagePermits = (uint) Math.Ceiling(_cachedCommandFlow.MessagePermits * 0.5);
+                _firstFlow                        = false;
             }
 
             _sendWhenZero = _cachedCommandFlow.MessagePermits;
         }
 
-        private async Task RejectPackage(MessagePackage messagePackage)
+        async Task RejectPackage(MessagePackage messagePackage)
         {
             var ack = new CommandAck
             {
-                Type = CommandAck.AckType.Individual,
+                Type             = CommandAck.AckType.Individual,
                 validation_error = CommandAck.ValidationError.ChecksumMismatch
             };
 

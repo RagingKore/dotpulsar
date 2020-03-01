@@ -12,19 +12,19 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Threading;
-
 namespace DotPulsar.Abstractions
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+
     /// <summary>
-    /// A reader abstraction.
+    ///     A reader abstraction.
     /// </summary>
     public interface IReader : IStateChanged<ReaderState>, IAsyncDisposable
     {
         /// <summary>
-        /// Get an IAsyncEnumerable for reading messages
+        ///     Get an IAsyncEnumerable for reading messages
         /// </summary>
         IAsyncEnumerable<Message> Messages(CancellationToken cancellationToken = default);
     }

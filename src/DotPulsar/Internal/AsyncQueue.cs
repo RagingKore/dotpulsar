@@ -12,45 +12,27 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+
     public sealed class AsyncQueue<T> : IEnqueue<T>, IDequeue<T>, IDisposable
     {
-        private readonly object _lock;
-        private readonly Queue<T> _queue;
-        private readonly LinkedList<CancelableCompletionSource<T>> _pendingDequeues;
-        private bool _isDisposed;
+        readonly object                                    _lock;
+        readonly LinkedList<CancelableCompletionSource<T>> _pendingDequeues;
+        readonly Queue<T>                                  _queue;
+        bool                                      _isDisposed;
 
         public AsyncQueue()
         {
-            _lock = new object();
-            _queue = new Queue<T>();
+            _lock            = new object();
+            _queue           = new Queue<T>();
             _pendingDequeues = new LinkedList<CancelableCompletionSource<T>>();
-            _isDisposed = false;
-        }
-
-        public void Enqueue(T item)
-        {
-            lock (_lock)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(nameof(AsyncQueue<T>));
-
-                if (_pendingDequeues.Count > 0)
-                {
-                    var tcs = _pendingDequeues.First;
-                    _pendingDequeues.RemoveFirst();
-                    tcs.Value.SetResult(item);
-                }
-                else
-                    _queue.Enqueue(item);
-            }
+            _isDisposed      = false;
         }
 
         public ValueTask<T> Dequeue(CancellationToken cancellationToken = default)
@@ -89,7 +71,27 @@ namespace DotPulsar.Internal
             }
         }
 
-        private void Cancel(LinkedListNode<CancelableCompletionSource<T>> node)
+        public void Enqueue(T item)
+        {
+            lock (_lock)
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(nameof(AsyncQueue<T>));
+
+                if (_pendingDequeues.Count > 0)
+                {
+                    var tcs = _pendingDequeues.First;
+                    _pendingDequeues.RemoveFirst();
+                    tcs.Value.SetResult(item);
+                }
+                else
+                {
+                    _queue.Enqueue(item);
+                }
+            }
+        }
+
+        void Cancel(LinkedListNode<CancelableCompletionSource<T>> node)
         {
             lock (_lock)
             {
@@ -98,7 +100,10 @@ namespace DotPulsar.Internal
                     node.Value.Dispose();
                     _pendingDequeues.Remove(node);
                 }
-                catch { }
+                catch
+                {
+                    // TODO RK: Ignored and yet we should probably log it.
+                }
             }
         }
     }

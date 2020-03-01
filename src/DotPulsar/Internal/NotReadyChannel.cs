@@ -12,25 +12,21 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Exceptions;
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Buffers;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Buffers;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using Exceptions;
+    using PulsarApi;
+
     public sealed class NotReadyChannel : IConsumerChannel, IProducerChannel, IReaderChannel
     {
         public ValueTask DisposeAsync() => new ValueTask();
 
         public ValueTask<Message> Receive(CancellationToken cancellationToken = default) => throw GetException();
-
-        public Task<CommandSendReceipt> Send(ReadOnlySequence<byte> payload) => throw GetException();
-
-        public Task<CommandSendReceipt> Send(PulsarApi.MessageMetadata metadata, ReadOnlySequence<byte> payload) => throw GetException();
 
         public Task Send(CommandAck command) => throw GetException();
 
@@ -40,6 +36,10 @@ namespace DotPulsar.Internal
 
         public Task<CommandGetLastMessageIdResponse> Send(CommandGetLastMessageId command) => throw GetException();
 
-        private Exception GetException() => new ChannelNotReadyException();
+        public Task<CommandSendReceipt> Send(ReadOnlySequence<byte> payload) => throw GetException();
+
+        public Task<CommandSendReceipt> Send(MessageMetadata metadata, ReadOnlySequence<byte> payload) => throw GetException();
+
+        Exception GetException() => new ChannelNotReadyException();
     }
 }

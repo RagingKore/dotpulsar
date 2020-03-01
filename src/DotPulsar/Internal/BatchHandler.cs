@@ -12,43 +12,50 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Extensions;
-using DotPulsar.Internal.PulsarApi;
-using System.Buffers;
-using System.Collections;
-using System.Collections.Generic;
-
 namespace DotPulsar.Internal
 {
+    using System.Buffers;
+    using System.Collections;
+    using System.Collections.Generic;
+    using Extensions;
+    using PulsarApi;
+
     public sealed class BatchHandler
     {
-        private readonly bool _trackBatches;
-        private readonly Queue<Message> _messages;
-        private readonly LinkedList<Batch> _batches;
+        readonly LinkedList<Batch> _batches;
+        readonly Queue<Message>    _messages;
+        readonly bool              _trackBatches;
 
         public BatchHandler(bool trackBatches)
         {
             _trackBatches = trackBatches;
-            _messages = new Queue<Message>();
-            _batches = new LinkedList<Batch>();
+            _messages     = new Queue<Message>();
+            _batches      = new LinkedList<Batch>();
         }
 
-        public Message Add(MessageIdData messageId, PulsarApi.MessageMetadata metadata, ReadOnlySequence<byte> data)
+        public Message Add(MessageIdData messageId, MessageMetadata metadata, ReadOnlySequence<byte> data)
         {
             if (_trackBatches)
                 _batches.AddLast(new Batch(messageId, metadata.NumMessagesInBatch));
 
             long index = 0;
+
             for (var i = 0; i < metadata.NumMessagesInBatch; ++i)
             {
                 var singleMetadataSize = data.ReadUInt32(index, true);
+
                 index += 4;
+
                 var singleMetadata = Serializer.Deserialize<SingleMessageMetadata>(data.Slice(index, singleMetadataSize));
+
                 index += singleMetadataSize;
+
                 var singleMessageId = new MessageId(messageId.LedgerId, messageId.EntryId, messageId.Partition, i);
-                var message = new Message(singleMessageId, metadata, singleMetadata, data.Slice(index, singleMetadata.PayloadSize));
+                var message         = new Message(singleMessageId, metadata, singleMetadata, data.Slice(index, singleMetadata.PayloadSize));
+
                 _messages.Enqueue(message);
-                index += (uint)singleMetadata.PayloadSize;
+
+                index += (uint) singleMetadata.PayloadSize;
             }
 
             return _messages.Dequeue();
@@ -66,30 +73,32 @@ namespace DotPulsar.Internal
         {
             foreach (var batch in _batches)
             {
-                if (messageId.LedgerId != batch.MessageId.LedgerId ||
-                    messageId.EntryId != batch.MessageId.EntryId ||
-                    messageId.Partition != batch.MessageId.Partition)
+                if (messageId.LedgerId != batch.MessageId.LedgerId
+                 || messageId.EntryId != batch.MessageId.EntryId
+                 || messageId.Partition != batch.MessageId.Partition)
                     continue;
 
                 batch.Acknowledge(messageId.BatchIndex);
+
                 if (batch.IsAcknowledged())
                 {
                     _batches.Remove(batch);
                     return batch.MessageId;
                 }
+
                 break;
             }
 
             return null;
         }
 
-        private sealed class Batch
+        sealed class Batch
         {
-            private readonly BitArray _acknowledgementIndex;
+            readonly BitArray _acknowledgementIndex;
 
             public Batch(MessageIdData messageId, int numberOfMessages)
             {
-                MessageId = messageId;
+                MessageId             = messageId;
                 _acknowledgementIndex = new BitArray(numberOfMessages, false);
             }
 
@@ -100,10 +109,8 @@ namespace DotPulsar.Internal
             public bool IsAcknowledged()
             {
                 for (var i = 0; i < _acknowledgementIndex.Length; i++)
-                {
                     if (!_acknowledgementIndex[i])
                         return false;
-                }
 
                 return true;
             }

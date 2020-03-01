@@ -12,18 +12,18 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Internal.Extensions;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using DotPulsar.Abstractions;
+    using Extensions;
+
     public sealed class MessageBuilder : IMessageBuilder
     {
-        private readonly IProducer _producer;
-        private readonly MessageMetadata _metadata;
+        readonly MessageMetadata _metadata;
+        readonly IProducer       _producer;
 
         public MessageBuilder(IProducer producer)
         {

@@ -12,53 +12,29 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     public sealed class AsyncLock : IAsyncDisposable
     {
-        private readonly LinkedList<CancelableCompletionSource<IDisposable>> _pending;
-        private readonly SemaphoreSlim _semaphoreSlim;
-        private readonly Releaser _releaser;
-        private readonly Task<IDisposable> _completedTask;
-        private bool _isDisposed;
+        readonly Task<IDisposable>                                   _completedTask;
+        readonly LinkedList<CancelableCompletionSource<IDisposable>> _pending;
+        readonly Releaser                                            _releaser;
+        readonly SemaphoreSlim                                       _semaphoreSlim;
+
+        bool _isDisposed;
 
         public AsyncLock()
         {
-            _pending = new LinkedList<CancelableCompletionSource<IDisposable>>();
+            _pending       = new LinkedList<CancelableCompletionSource<IDisposable>>();
             _semaphoreSlim = new SemaphoreSlim(1, 1);
-            _releaser = new Releaser(Release);
-            _completedTask = Task.FromResult((IDisposable)_releaser);
-            _isDisposed = false;
-        }
-
-        public Task<IDisposable> Lock(CancellationToken cancellationToken = default)
-        {
-            LinkedListNode<CancelableCompletionSource<IDisposable>>? node = null;
-
-            lock (_pending)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(nameof(AsyncLock));
-
-                if (_semaphoreSlim.CurrentCount == 1) //Lock is free
-                {
-                    _semaphoreSlim.Wait(); //Will never block
-                    return _completedTask;
-                }
-
-                //Lock was not free
-                var ccs = new CancelableCompletionSource<IDisposable>();
-                node = _pending.AddLast(ccs);
-            }
-
-            cancellationToken.Register(() => Cancel(node));
-
-            return node.Value.Task;
+            _releaser      = new Releaser(Release);
+            _completedTask = Task.FromResult((IDisposable) _releaser);
+            _isDisposed    = false;
         }
 
         public async ValueTask DisposeAsync()
@@ -84,7 +60,31 @@ namespace DotPulsar.Internal
             _semaphoreSlim.Dispose();
         }
 
-        private void Cancel(LinkedListNode<CancelableCompletionSource<IDisposable>> node)
+        public Task<IDisposable> Lock(CancellationToken cancellationToken = default)
+        {
+            LinkedListNode<CancelableCompletionSource<IDisposable>>? node;
+
+            lock (_pending)
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(nameof(AsyncLock));
+
+                if (_semaphoreSlim.CurrentCount == 1) //Lock is free
+                {
+                    _semaphoreSlim.Wait(cancellationToken); //Will never block
+                    return _completedTask;
+                }
+
+                //Lock was not free
+                node = _pending.AddLast(new CancelableCompletionSource<IDisposable>());
+            }
+
+            cancellationToken.Register(() => Cancel(node));
+
+            return node.Value.Task;
+        }
+
+        void Cancel(LinkedListNode<CancelableCompletionSource<IDisposable>> node)
         {
             lock (_pending)
             {
@@ -95,12 +95,12 @@ namespace DotPulsar.Internal
                 }
                 catch
                 {
-                    // Ignore
+                    // TODO RK: Ignored and yet we should probably log it.
                 }
             }
         }
 
-        private void Release()
+        void Release()
         {
             lock (_pending)
             {
@@ -118,9 +118,9 @@ namespace DotPulsar.Internal
             }
         }
 
-        private class Releaser : IDisposable
+        class Releaser : IDisposable
         {
-            private readonly Action _release;
+            readonly Action _release;
 
             public Releaser(Action release) => _release = release;
 

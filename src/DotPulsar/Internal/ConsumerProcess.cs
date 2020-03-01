@@ -12,18 +12,18 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using System;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Threading.Tasks;
+    using Abstractions;
+
     public sealed class ConsumerProcess : Process
     {
-        private readonly IStateManager<ConsumerState> _stateManager;
-        private readonly IConsumerChannelFactory _factory;
-        private readonly Consumer _consumer;
-        private readonly bool _isFailoverSubscription;
+        readonly Consumer                     _consumer;
+        readonly IConsumerChannelFactory      _factory;
+        readonly bool                         _isFailoverSubscription;
+        readonly IStateManager<ConsumerState> _stateManager;
 
         public ConsumerProcess(
             Guid correlationId,
@@ -32,13 +32,13 @@ namespace DotPulsar.Internal
             Consumer consumer,
             bool isFailoverSubscription) : base(correlationId)
         {
-            _stateManager = stateManager;
-            _factory = factory;
-            _consumer = consumer;
+            _stateManager           = stateManager;
+            _factory                = factory;
+            _consumer               = consumer;
             _isFailoverSubscription = isFailoverSubscription;
         }
 
-        public async override ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
             _stateManager.SetState(ConsumerState.Closed);
             CancellationTokenSource.Cancel();
@@ -72,6 +72,7 @@ namespace DotPulsar.Internal
                 case ChannelState.Connected:
                     if (!_isFailoverSubscription)
                         _stateManager.SetState(ConsumerState.Active);
+
                     return;
                 case ChannelState.ReachedEndOfTopic:
                     _stateManager.SetState(ConsumerState.ReachedEndOfTopic);
@@ -82,7 +83,7 @@ namespace DotPulsar.Internal
             }
         }
 
-        private async void SetupChannel()
+        async void SetupChannel()
         {
             IConsumerChannel? channel = null;
 

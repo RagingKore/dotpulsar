@@ -12,25 +12,26 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Events;
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using DotPulsar.Abstractions;
+    using Events;
+
     public sealed class Reader : IReader
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private IReaderChannel _channel;
-        private readonly IExecute _executor;
-        private readonly IStateChanged<ReaderState> _state;
-        private int _isDisposed;
+        readonly Guid                       _correlationId;
+        readonly IRegisterEvent             _eventRegister;
+        readonly IExecute                   _executor;
+        readonly IStateChanged<ReaderState> _state;
+
+        IReaderChannel _channel;
+        int            _isDisposed;
 
         public Reader(
             Guid correlationId,
@@ -41,10 +42,10 @@ namespace DotPulsar.Internal
         {
             _correlationId = correlationId;
             _eventRegister = eventRegister;
-            _channel = initialChannel;
-            _executor = executor;
-            _state = state;
-            _isDisposed = 0;
+            _channel       = initialChannel;
+            _executor      = executor;
+            _state         = state;
+            _isDisposed    = 0;
 
             _eventRegister.Register(new ReaderCreated(_correlationId, this));
         }
@@ -64,9 +65,7 @@ namespace DotPulsar.Internal
             ThrowIfDisposed();
 
             while (!cancellationToken.IsCancellationRequested)
-            {
                 yield return await _executor.Execute(() => _channel.Receive(cancellationToken), cancellationToken);
-            }
         }
 
         public async ValueTask DisposeAsync()
@@ -84,7 +83,7 @@ namespace DotPulsar.Internal
             _channel = channel;
         }
 
-        private void ThrowIfDisposed()
+        void ThrowIfDisposed()
         {
             if (_isDisposed != 0)
                 throw new ObjectDisposedException(nameof(Reader));

@@ -12,21 +12,21 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.PulsarApi;
-using System.Buffers;
-
 namespace DotPulsar.Internal
 {
+    using System.Buffers;
+    using PulsarApi;
+
     public sealed class SendPackage
     {
-        public SendPackage(CommandSend command, PulsarApi.MessageMetadata metadata)
+        public SendPackage(CommandSend command, MessageMetadata metadata)
         {
-            Command = command;
+            Command  = command;
             Metadata = metadata;
         }
 
-        public CommandSend Command { get; }
-        public PulsarApi.MessageMetadata Metadata { get; set; }
-        public ReadOnlySequence<byte> Payload { get; set; }
+        public CommandSend            Command  { get; }
+        public MessageMetadata        Metadata { get; set; }
+        public ReadOnlySequence<byte> Payload  { get; set; }
     }
 }

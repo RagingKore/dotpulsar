@@ -12,19 +12,19 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal.Abstractions
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using PulsarApi;
+
     public interface IConsumerChannel : IAsyncDisposable
     {
-        Task Send(CommandAck command);
-        Task<CommandSuccess> Send(CommandUnsubscribe command);
-        Task<CommandSuccess> Send(CommandSeek command);
+        Task                                  Send(CommandAck command);
+        Task<CommandSuccess>                  Send(CommandUnsubscribe command);
+        Task<CommandSuccess>                  Send(CommandSeek command);
         Task<CommandGetLastMessageIdResponse> Send(CommandGetLastMessageId command);
-        ValueTask<Message> Receive(CancellationToken cancellationToken = default);
+        ValueTask<Message>                    Receive(CancellationToken cancellationToken = default);
     }
 }

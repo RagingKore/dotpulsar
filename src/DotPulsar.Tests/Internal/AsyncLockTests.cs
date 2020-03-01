@@ -34,16 +34,16 @@ namespace DotPulsar.Tests.Internal
             //Assert
             Assert.True(actual.IsCompleted);
 
-            //Annihilate 
+            //Annihilate
             actual.Result.Dispose();
             await sut.DisposeAsync();
         }
 
         [Fact]
-        public async Task Lock_GivenLockIsTaken_ShouldReturnIncompletedTask()
+        public async Task Lock_GivenLockIsTaken_ShouldReturnIncompleteTask()
         {
             //Arrange
-            var sut = new AsyncLock();
+            var sut          = new AsyncLock();
             var alreadyTaken = await sut.Lock();
 
             //Act
@@ -76,8 +76,8 @@ namespace DotPulsar.Tests.Internal
         public async Task Lock_GivenLockIsDisposedWhileAwaitingLock_ShouldThrowObjectDisposedException()
         {
             //Arrange
-            var sut = new AsyncLock();
-            var gotLock = await sut.Lock();
+            var sut      = new AsyncLock();
+            var gotLock  = await sut.Lock();
             var awaiting = sut.Lock();
             _ = Task.Run(async () => await sut.DisposeAsync());
 
@@ -96,9 +96,9 @@ namespace DotPulsar.Tests.Internal
         public async Task Lock_GivenLockIsTakenAndCancellationTokenIsActivated_ShouldThrowTaskCanceledException()
         {
             //Arrange
-            var cts = new CancellationTokenSource();
-            var sut = new AsyncLock();
-            var gotLock = await sut.Lock();
+            var cts      = new CancellationTokenSource();
+            var sut      = new AsyncLock();
+            var gotLock  = await sut.Lock();
             var awaiting = sut.Lock(cts.Token);
 
             //Act
@@ -118,8 +118,8 @@ namespace DotPulsar.Tests.Internal
         public async Task Dispose_GivenLockIsDisposedWhileItIsTaken_ShouldNotCompleteBeforeItIsReleased()
         {
             //Arrange
-            var sut = new AsyncLock();
-            var gotLock = await sut.Lock();
+            var sut         = new AsyncLock();
+            var gotLock     = await sut.Lock();
             var disposeTask = Task.Run(async () => await sut.DisposeAsync());
             Assert.False(disposeTask.IsCompleted);
 

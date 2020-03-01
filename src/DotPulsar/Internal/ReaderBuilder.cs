@@ -12,25 +12,25 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Exceptions;
-
 namespace DotPulsar.Internal
 {
+    using DotPulsar.Abstractions;
+    using DotPulsar.Exceptions;
+
     public sealed class ReaderBuilder : IReaderBuilder
     {
-        private readonly IPulsarClient _pulsarClient;
-        private string? _readerName;
-        private uint _messagePrefetchCount;
-        private bool _readCompacted;
-        private MessageId? _startMessageId;
-        private string? _topic;
+        readonly IPulsarClient _pulsarClient;
+        uint          _messagePrefetchCount;
+        bool          _readCompacted;
+        string?       _readerName;
+        MessageId?    _startMessageId;
+        string?       _topic;
 
         public ReaderBuilder(IPulsarClient pulsarClient)
         {
-            _pulsarClient = pulsarClient;
+            _pulsarClient         = pulsarClient;
             _messagePrefetchCount = ReaderOptions.DefaultMessagePrefetchCount;
-            _readCompacted = ReaderOptions.DefaultReadCompacted;
+            _readCompacted        = ReaderOptions.DefaultReadCompacted;
         }
 
         public IReaderBuilder ReaderName(string name)
@@ -74,8 +74,8 @@ namespace DotPulsar.Internal
             var options = new ReaderOptions(_startMessageId, _topic!)
             {
                 MessagePrefetchCount = _messagePrefetchCount,
-                ReadCompacted = _readCompacted,
-                ReaderName = _readerName
+                ReadCompacted        = _readCompacted,
+                ReaderName           = _readerName
             };
 
             return _pulsarClient.CreateReader(options);

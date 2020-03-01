@@ -21,11 +21,11 @@ namespace DotPulsar
         public ProducerOptions(string topic)
         {
             InitialSequenceId = DefaultInitialSequenceId;
-            Topic = topic;
+            Topic             = topic;
         }
 
-        public string? ProducerName { get; set; }
-        public ulong InitialSequenceId { get; set; }
-        public string Topic { get; set; }
+        public string? ProducerName      { get; set; }
+        public ulong   InitialSequenceId { get; set; }
+        public string  Topic             { get; set; }
     }
 }

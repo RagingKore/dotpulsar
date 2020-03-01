@@ -12,28 +12,28 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Extensions;
-using DotPulsar.Internal.PulsarApi;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System.Threading.Tasks;
+    using Abstractions;
+    using Extensions;
+    using PulsarApi;
+
     public sealed class Connection : IConnection
     {
-        private readonly AsyncLock _lock;
-        private readonly ChannelManager _channelManager;
-        private readonly RequestResponseHandler _requestResponseHandler;
-        private readonly PingPongHandler _pingPongHandler;
-        private readonly IPulsarStream _stream;
+        readonly ChannelManager         _channelManager;
+        readonly AsyncLock              _lock;
+        readonly PingPongHandler        _pingPongHandler;
+        readonly RequestResponseHandler _requestResponseHandler;
+        readonly IPulsarStream          _stream;
 
         public Connection(IPulsarStream stream)
         {
-            _lock = new AsyncLock();
-            _channelManager = new ChannelManager();
+            _lock                   = new AsyncLock();
+            _channelManager         = new ChannelManager();
             _requestResponseHandler = new RequestResponseHandler();
-            _pingPongHandler = new PingPongHandler(this);
-            _stream = stream;
+            _pingPongHandler        = new PingPongHandler(this);
+            _stream                 = stream;
         }
 
         public async ValueTask<bool> HasChannels()
@@ -50,7 +50,7 @@ namespace DotPulsar.Internal
 
             using (await _lock.Lock())
             {
-                var baseCommand = command.AsBaseCommand();
+                var baseCommand         = command.AsBaseCommand();
                 var requestResponseTask = _requestResponseHandler.Outgoing(baseCommand);
                 responseTask = _channelManager.Outgoing(command, requestResponseTask, channel);
                 var sequence = Serializer.Serialize(baseCommand);
@@ -66,7 +66,7 @@ namespace DotPulsar.Internal
 
             using (await _lock.Lock())
             {
-                var baseCommand = command.AsBaseCommand();
+                var baseCommand         = command.AsBaseCommand();
                 var requestResponseTask = _requestResponseHandler.Outgoing(baseCommand);
                 responseTask = _channelManager.Outgoing(command, requestResponseTask, channel);
                 var sequence = Serializer.Serialize(baseCommand);
@@ -78,7 +78,7 @@ namespace DotPulsar.Internal
 
         public async Task Send(CommandPing command) => await Send(command.AsBaseCommand());
         public async Task Send(CommandPong command) => await Send(command.AsBaseCommand());
-        public async Task Send(CommandAck command) => await Send(command.AsBaseCommand());
+        public async Task Send(CommandAck command)  => await Send(command.AsBaseCommand());
         public async Task Send(CommandFlow command) => await Send(command.AsBaseCommand());
 
         public async Task<BaseCommand> Send(CommandUnsubscribe command)
@@ -97,9 +97,9 @@ namespace DotPulsar.Internal
             return await responseTask;
         }
 
-        public async Task<BaseCommand> Send(CommandConnect command) => await SendRequestResponse(command.AsBaseCommand());
-        public async Task<BaseCommand> Send(CommandLookupTopic command) => await SendRequestResponse(command.AsBaseCommand());
-        public async Task<BaseCommand> Send(CommandSeek command) => await SendRequestResponse(command.AsBaseCommand());
+        public async Task<BaseCommand> Send(CommandConnect command)          => await SendRequestResponse(command.AsBaseCommand());
+        public async Task<BaseCommand> Send(CommandLookupTopic command)      => await SendRequestResponse(command.AsBaseCommand());
+        public async Task<BaseCommand> Send(CommandSeek command)             => await SendRequestResponse(command.AsBaseCommand());
         public async Task<BaseCommand> Send(CommandGetLastMessageId command) => await SendRequestResponse(command.AsBaseCommand());
 
         public async Task<BaseCommand> Send(CommandCloseProducer command)
@@ -137,6 +137,7 @@ namespace DotPulsar.Internal
         public async Task<BaseCommand> Send(SendPackage command)
         {
             Task<BaseCommand>? response = null;
+
             using (await _lock.Lock())
             {
                 var baseCommand = command.Command.AsBaseCommand();
@@ -144,22 +145,33 @@ namespace DotPulsar.Internal
                 var sequence = Serializer.Serialize(baseCommand, command.Metadata, command.Payload);
                 await _stream.Send(sequence);
             }
+
             return await response;
         }
 
-        private async Task<BaseCommand> SendRequestResponse(BaseCommand command)
+        public async ValueTask DisposeAsync()
+        {
+            await _lock.DisposeAsync();
+            _requestResponseHandler.Dispose();
+            _channelManager.Dispose();
+            await _stream.DisposeAsync();
+        }
+
+        async Task<BaseCommand> SendRequestResponse(BaseCommand command)
         {
             Task<BaseCommand>? response = null;
+
             using (await _lock.Lock())
             {
                 response = _requestResponseHandler.Outgoing(command);
                 var sequence = Serializer.Serialize(command);
                 await _stream.Send(sequence);
             }
+
             return await response;
         }
 
-        private async Task Send(BaseCommand command)
+        async Task Send(BaseCommand command)
         {
             using (await _lock.Lock())
             {
@@ -175,7 +187,7 @@ namespace DotPulsar.Internal
             await foreach (var frame in _stream.Frames())
             {
                 var commandSize = frame.ReadUInt32(0, true);
-                var command = Serializer.Deserialize<BaseCommand>(frame.Slice(4, commandSize));
+                var command     = Serializer.Deserialize<BaseCommand>(frame.Slice(4, commandSize));
 
                 switch (command.CommandType)
                 {
@@ -202,14 +214,6 @@ namespace DotPulsar.Internal
                         break;
                 }
             }
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _lock.DisposeAsync();
-            _requestResponseHandler.Dispose();
-            _channelManager.Dispose();
-            await _stream.DisposeAsync();
         }
     }
 }

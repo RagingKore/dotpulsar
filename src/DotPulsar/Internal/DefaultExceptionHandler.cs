@@ -12,19 +12,19 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Exceptions;
-using DotPulsar.Internal.Exceptions;
-using System;
-using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Net.Sockets;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using DotPulsar.Abstractions;
+    using DotPulsar.Exceptions;
+    using Exceptions;
+
     public sealed class DefaultExceptionHandler : IHandleException
     {
-        private readonly TimeSpan _retryInterval;
+        readonly TimeSpan _retryInterval;
 
         public DefaultExceptionHandler(TimeSpan retryInterval) => _retryInterval = retryInterval;
 
@@ -37,15 +37,17 @@ namespace DotPulsar.Internal
             exceptionContext.ExceptionHandled = true;
         }
 
-        private FaultAction DetermineFaultAction(Exception exception, CancellationToken cancellationToken)
+        FaultAction DetermineFaultAction(Exception exception, CancellationToken cancellationToken)
         {
             switch (exception)
             {
                 case TooManyRequestsException _: return FaultAction.Retry;
                 case ChannelNotReadyException _: return FaultAction.Retry;
                 case ServiceNotReadyException _: return FaultAction.Retry;
-                case OperationCanceledException _: return cancellationToken.IsCancellationRequested ? FaultAction.Rethrow : FaultAction.Retry;
+                case OperationCanceledException _:
+                    return cancellationToken.IsCancellationRequested ? FaultAction.Rethrow : FaultAction.Retry;
                 case DotPulsarException _: return FaultAction.Rethrow;
+
                 case SocketException socketException:
                     switch (socketException.SocketErrorCode)
                     {
@@ -54,6 +56,7 @@ namespace DotPulsar.Internal
                         case SocketError.NetworkUnreachable:
                             return FaultAction.Rethrow;
                     }
+
                     return FaultAction.Retry;
             }
 

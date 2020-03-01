@@ -12,24 +12,33 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal.Abstractions;
-using DotPulsar.Internal.Extensions;
-using DotPulsar.Internal.PulsarApi;
-using System;
-using System.Buffers;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
+    using System;
+    using System.Buffers;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using Extensions;
+    using PulsarApi;
+
     public sealed class ChannelManager : IDisposable
     {
-        private readonly IdLookup<IChannel> _consumerChannels;
-        private readonly IdLookup<IChannel> _producerChannels;
+        readonly IdLookup<IChannel> _consumerChannels;
+        readonly IdLookup<IChannel> _producerChannels;
 
         public ChannelManager()
         {
             _consumerChannels = new IdLookup<IChannel>();
             _producerChannels = new IdLookup<IChannel>();
+        }
+
+        public void Dispose()
+        {
+            foreach (var channel in _consumerChannels.RemoveAll())
+                channel.Disconnected();
+
+            foreach (var channel in _producerChannels.RemoveAll())
+                channel.Disconnected();
         }
 
         public bool HasChannels() => !_consumerChannels.IsEmpty() || !_producerChannels.IsEmpty();
@@ -38,69 +47,81 @@ namespace DotPulsar.Internal
         {
             var producerId = _producerChannels.Add(channel);
             command.ProducerId = producerId;
-            return response.ContinueWith(result =>
-            {
-                if (result.Result.CommandType == BaseCommand.Type.Error)
+            return response.ContinueWith(
+                result =>
                 {
-                    _producerChannels.Remove(producerId);
-                    result.Result.Error.Throw();
-                }
-                channel.Connected();
-                return new ProducerResponse(producerId, result.Result.ProducerSuccess.ProducerName);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                    if (result.Result.CommandType == BaseCommand.Type.Error)
+                    {
+                        _producerChannels.Remove(producerId);
+                        result.Result.Error.Throw();
+                    }
+
+                    channel.Connected();
+                    return new ProducerResponse(producerId, result.Result.ProducerSuccess.ProducerName);
+                }, TaskContinuationOptions.OnlyOnRanToCompletion
+            );
         }
 
         public Task<SubscribeResponse> Outgoing(CommandSubscribe command, Task<BaseCommand> response, IChannel channel)
         {
             var consumerId = _consumerChannels.Add(channel);
             command.ConsumerId = consumerId;
-            return response.ContinueWith(result =>
-            {
-                if (result.Result.CommandType == BaseCommand.Type.Error)
+            return response.ContinueWith(
+                result =>
                 {
-                    _consumerChannels.Remove(consumerId);
-                    result.Result.Error.Throw();
-                }
-                channel.Connected();
-                return new SubscribeResponse(consumerId);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                    if (result.Result.CommandType == BaseCommand.Type.Error)
+                    {
+                        _consumerChannels.Remove(consumerId);
+                        result.Result.Error.Throw();
+                    }
+
+                    channel.Connected();
+                    return new SubscribeResponse(consumerId);
+                }, TaskContinuationOptions.OnlyOnRanToCompletion
+            );
         }
 
         public void Outgoing(CommandCloseConsumer command, Task<BaseCommand> response)
         {
             var consumerId = command.ConsumerId;
 
-            _ = response.ContinueWith(result =>
-            {
-                if (result.Result.CommandType == BaseCommand.Type.Success)
-                    _consumerChannels.Remove(consumerId);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            _ = response.ContinueWith(
+                result =>
+                {
+                    if (result.Result.CommandType == BaseCommand.Type.Success)
+                        _consumerChannels.Remove(consumerId);
+                }, TaskContinuationOptions.OnlyOnRanToCompletion
+            );
         }
 
         public void Outgoing(CommandCloseProducer command, Task<BaseCommand> response)
         {
             var producerId = command.ProducerId;
 
-            _ = response.ContinueWith(result =>
-            {
-                if (result.Result.CommandType == BaseCommand.Type.Success)
-                    _producerChannels.Remove(producerId);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            _ = response.ContinueWith(
+                result =>
+                {
+                    if (result.Result.CommandType == BaseCommand.Type.Success)
+                        _producerChannels.Remove(producerId);
+                }, TaskContinuationOptions.OnlyOnRanToCompletion
+            );
         }
 
         public void Outgoing(CommandUnsubscribe command, Task<BaseCommand> response)
         {
             var consumerId = command.ConsumerId;
 
-            _ = response.ContinueWith(result =>
-            {
-                if (result.Result.CommandType == BaseCommand.Type.Success)
+            _ = response.ContinueWith(
+                result =>
                 {
-                    var channel = _consumerChannels.Remove(consumerId);
-                    if (channel != null)
-                        channel.Unsubscribed();
-                }
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                    if (result.Result.CommandType == BaseCommand.Type.Success)
+                    {
+                        var channel = _consumerChannels.Remove(consumerId);
+                        if (channel != null)
+                            channel.Unsubscribed();
+                    }
+                }, TaskContinuationOptions.OnlyOnRanToCompletion
+            );
         }
 
         public void Incoming(CommandCloseConsumer command)
@@ -141,15 +162,6 @@ namespace DotPulsar.Internal
             var consumer = _consumerChannels[command.ConsumerId];
             if (consumer != null)
                 consumer.Received(new MessagePackage(command.MessageId, data));
-        }
-
-        public void Dispose()
-        {
-            foreach (var channel in _consumerChannels.RemoveAll())
-                channel.Disconnected();
-
-            foreach (var channel in _producerChannels.RemoveAll())
-                channel.Disconnected();
         }
     }
 }

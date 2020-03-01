@@ -12,19 +12,19 @@
  * limitations under the License.
  */
 
-using System;
-
 namespace DotPulsar.Internal
 {
+    using System;
+
     public sealed class StateTask<TState> : IDisposable where TState : notnull
     {
-        private readonly TState _state;
-        private readonly StateChanged _change;
+        readonly StateChanged _change;
+        readonly TState       _state;
 
         public StateTask(TState state, StateChanged change)
         {
-            _state = state;
-            _change = change;
+            _state                     = state;
+            _change                    = change;
             CancelableCompletionSource = new CancelableCompletionSource<TState>();
         }
 

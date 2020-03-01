@@ -12,26 +12,33 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace DotPulsar.Internal
 {
-    public sealed class Awaitor<T, Result> : IDisposable
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+
+    public sealed class Awaitor<T, TResult> : IDisposable
     {
-        private readonly Dictionary<T, TaskCompletionSource<Result>> _items;
+        readonly Dictionary<T, TaskCompletionSource<TResult>> _items;
 
-        public Awaitor() => _items = new Dictionary<T, TaskCompletionSource<Result>>();
+        public Awaitor() => _items = new Dictionary<T, TaskCompletionSource<TResult>>();
 
-        public Task<Result> CreateTask(T item)
+        public void Dispose()
         {
-            var tcs = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+            foreach (var item in _items.Values) item.SetCanceled();
+
+            _items.Clear();
+        }
+
+        public Task<TResult> CreateTask(T item)
+        {
+            var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             _items.Add(item, tcs);
             return tcs.Task;
         }
 
-        public void SetResult(T item, Result result)
+        public void SetResult(T item, TResult result)
         {
 #if NETSTANDARD2_0
             var tcs = _items[item];
@@ -40,16 +47,6 @@ namespace DotPulsar.Internal
             _items.Remove(item, out var tcs);
 #endif
             tcs.SetResult(result);
-        }
-
-        public void Dispose()
-        {
-            foreach (var item in _items.Values)
-            {
-                item.SetCanceled();
-            }
-
-            _items.Clear();
         }
     }
 }
