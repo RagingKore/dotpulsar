@@ -12,28 +12,26 @@
  * limitations under the License.
  */
 
-using DotPulsar.Abstractions;
-using DotPulsar.Internal;
-using System;
-using System.Threading.Tasks;
-using Xunit.Abstractions;
-
 namespace DotPulsar.Stress.Tests
 {
+    using System;
+    using System.Threading.Tasks;
+    using Abstractions;
+    using Internal;
+    using Xunit.Abstractions;
+
     internal class XunitExceptionHandler : IHandleException
     {
-        private readonly ITestOutputHelper _output;
-        private readonly IHandleException _exceptionHandler;
+        readonly IHandleException  _exceptionHandler;
+        readonly ITestOutputHelper _output;
 
         public XunitExceptionHandler(ITestOutputHelper output, IHandleException exceptionHandler)
         {
-            _output = output;
+            _output           = output;
             _exceptionHandler = exceptionHandler;
         }
 
-        public XunitExceptionHandler(ITestOutputHelper output) : this(output, new DefaultExceptionHandler(TimeSpan.FromSeconds(3)))
-        {
-        }
+        public XunitExceptionHandler(ITestOutputHelper output) : this(output, new DefaultExceptionHandler(TimeSpan.FromSeconds(3))) { }
 
         public async ValueTask OnException(ExceptionContext exceptionContext)
         {
@@ -41,9 +39,10 @@ namespace DotPulsar.Stress.Tests
 
             if (!exceptionContext.ExceptionHandled)
                 _output.WriteLine(
-                    $"{exceptionContext.Exception.GetType().Name} " +
-                    $"{exceptionContext.Exception.Message}{Environment.NewLine}" +
-                    $"{exceptionContext.Exception.StackTrace}");
+                    $"{exceptionContext.Exception.GetType().Name} "
+                  + $"{exceptionContext.Exception.Message}{Environment.NewLine}"
+                  + $"{exceptionContext.Exception.StackTrace}"
+                );
         }
     }
 }

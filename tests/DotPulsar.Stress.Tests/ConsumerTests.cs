@@ -12,22 +12,22 @@
  * limitations under the License.
  */
 
-using DotPulsar.Extensions;
-using FluentAssertions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
-using Xunit.Abstractions;
-
 namespace DotPulsar.Stress.Tests
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Extensions;
+    using FluentAssertions;
+    using Xunit;
+    using Xunit.Abstractions;
+
     public class ConsumerTests
     {
-        private readonly ITestOutputHelper _output;
+        readonly ITestOutputHelper _output;
 
         public ConsumerTests(ITestOutputHelper output) => _output = output;
 

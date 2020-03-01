@@ -12,50 +12,48 @@
  * limitations under the License.
  */
 
-using DotPulsar.Internal;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
-
 namespace DotPulsar.Tests.Internal
 {
+    using System;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using DotPulsar.Internal;
+    using Xunit;
+
     public class AsyncLockTests
     {
         [Fact]
-        public async Task Lock_GivenLockIsFree_ShouldReturnCompletedTask()
+        public async Task Dispose_GivenLockIsDisposedWhileItIsTaken_ShouldNotCompleteBeforeItIsReleased()
+        {
+            //Arrange
+            var sut         = new AsyncLock();
+            var gotLock     = await sut.Lock();
+            var disposeTask = Task.Run(async () => await sut.DisposeAsync());
+            Assert.False(disposeTask.IsCompleted);
+
+            //Act
+            gotLock.Dispose();
+            await disposeTask;
+
+            //Assert
+            Assert.True(disposeTask.IsCompleted);
+
+            //Annihilate
+            await sut.DisposeAsync();
+        }
+
+        [Fact]
+        public async Task Dispose_WhenCalledMultipleTimes_ShouldBeSafeToDoSo()
         {
             //Arrange
             var sut = new AsyncLock();
 
             //Act
-            var actual = sut.Lock();
+            await sut.DisposeAsync();
+            var exception = await Record.ExceptionAsync(() => sut.DisposeAsync().AsTask()); // xUnit can't record ValueTask yet
 
             //Assert
-            Assert.True(actual.IsCompleted);
-
-            //Annihilate
-            actual.Result.Dispose();
-            await sut.DisposeAsync();
-        }
-
-        [Fact]
-        public async Task Lock_GivenLockIsTaken_ShouldReturnIncompleteTask()
-        {
-            //Arrange
-            var sut          = new AsyncLock();
-            var alreadyTaken = await sut.Lock();
-
-            //Act
-            var actual = sut.Lock();
-
-            //Assert
-            Assert.False(actual.IsCompleted);
-
-            //Annihilate
-            alreadyTaken.Dispose();
-            actual.Result.Dispose();
-            await sut.DisposeAsync();
+            Assert.Null(exception);
         }
 
         [Fact]
@@ -93,6 +91,42 @@ namespace DotPulsar.Tests.Internal
         }
 
         [Fact]
+        public async Task Lock_GivenLockIsFree_ShouldReturnCompletedTask()
+        {
+            //Arrange
+            var sut = new AsyncLock();
+
+            //Act
+            var actual = sut.Lock();
+
+            //Assert
+            Assert.True(actual.IsCompleted);
+
+            //Annihilate
+            actual.Result.Dispose();
+            await sut.DisposeAsync();
+        }
+
+        [Fact]
+        public async Task Lock_GivenLockIsTaken_ShouldReturnIncompleteTask()
+        {
+            //Arrange
+            var sut          = new AsyncLock();
+            var alreadyTaken = await sut.Lock();
+
+            //Act
+            var actual = sut.Lock();
+
+            //Assert
+            Assert.False(actual.IsCompleted);
+
+            //Annihilate
+            alreadyTaken.Dispose();
+            actual.Result.Dispose();
+            await sut.DisposeAsync();
+        }
+
+        [Fact]
         public async Task Lock_GivenLockIsTakenAndCancellationTokenIsActivated_ShouldThrowTaskCanceledException()
         {
             //Arrange
@@ -112,40 +146,6 @@ namespace DotPulsar.Tests.Internal
             cts.Dispose();
             gotLock.Dispose();
             await sut.DisposeAsync();
-        }
-
-        [Fact]
-        public async Task Dispose_GivenLockIsDisposedWhileItIsTaken_ShouldNotCompleteBeforeItIsReleased()
-        {
-            //Arrange
-            var sut         = new AsyncLock();
-            var gotLock     = await sut.Lock();
-            var disposeTask = Task.Run(async () => await sut.DisposeAsync());
-            Assert.False(disposeTask.IsCompleted);
-
-            //Act
-            gotLock.Dispose();
-            await disposeTask;
-
-            //Assert
-            Assert.True(disposeTask.IsCompleted);
-
-            //Annihilate
-            await sut.DisposeAsync();
-        }
-
-        [Fact]
-        public async Task Dispose_WhenCalledMultipleTimes_ShouldBeSafeToDoSo()
-        {
-            //Arrange
-            var sut = new AsyncLock();
-
-            //Act
-            await sut.DisposeAsync();
-            var exception = await Record.ExceptionAsync(() => sut.DisposeAsync().AsTask()); // xUnit can't record ValueTask yet
-
-            //Assert
-            Assert.Null(exception);
         }
     }
 }
