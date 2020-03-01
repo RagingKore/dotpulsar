@@ -19,10 +19,13 @@ namespace DotPulsar
     using System.Collections.Generic;
     using System.Linq;
     using Internal.PulsarApi;
+    using static System.Convert;
+    using static System.DateTimeOffset;
 
     public sealed class Message
     {
-        readonly List<KeyValue>                       _keyValues;
+        readonly List<KeyValue> _keyValues;
+
         IReadOnlyDictionary<string, string>? _properties;
 
         internal Message(
@@ -70,12 +73,13 @@ namespace DotPulsar
 
         public bool    HasEventTime   => EventTime != 0;
         public bool    HasKey         => Key != null;
-        public byte[]? KeyBytes       => HasBase64EncodedKey ? Convert.FromBase64String(Key) : null;
+        public byte[]? KeyBytes       => HasBase64EncodedKey ? FromBase64String(Key) : null;
         public bool    HasOrderingKey => OrderingKey != null;
 
-        public DateTimeOffset EventTimeAsDateTimeOffset   => DateTimeOffset.FromUnixTimeMilliseconds((long) EventTime);
-        public DateTimeOffset PublishTimeAsDateTimeOffset => DateTimeOffset.FromUnixTimeMilliseconds((long) PublishTime);
+        public DateTimeOffset EventTimeAsDateTimeOffset   => FromUnixTimeMilliseconds((long) EventTime);
+        public DateTimeOffset PublishTimeAsDateTimeOffset => FromUnixTimeMilliseconds((long) PublishTime);
 
-        public IReadOnlyDictionary<string, string> Properties => _properties ??= _keyValues.ToDictionary(p => p.Key, p => p.Value);
+        public IReadOnlyDictionary<string, string> Properties
+            => _properties ??= _keyValues.ToDictionary(p => p.Key, p => p.Value);
     }
 }

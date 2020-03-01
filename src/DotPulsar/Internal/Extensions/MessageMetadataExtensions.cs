@@ -12,11 +12,10 @@
  * limitations under the License.
  */
 
-using Metadata = DotPulsar.Internal.PulsarApi.MessageMetadata;
-
 namespace DotPulsar.Internal.Extensions
 {
     using System;
+    using Metadata = PulsarApi.MessageMetadata;
 
     public static class MessageMetadataExtensions
     {

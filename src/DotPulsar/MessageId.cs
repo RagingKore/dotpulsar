@@ -46,10 +46,11 @@ namespace DotPulsar
         public int   Partition  => Data.Partition;
         public int   BatchIndex => Data.BatchIndex;
 
-        public bool Equals(MessageId other) => LedgerId == other.LedgerId
-                                            && EntryId == other.EntryId
-                                            && Partition == other.Partition
-                                            && BatchIndex == other.BatchIndex;
+        public bool Equals(MessageId other)
+            => LedgerId == other.LedgerId
+            && EntryId == other.EntryId
+            && Partition == other.Partition
+            && BatchIndex == other.BatchIndex;
 
         public override bool Equals(object o) => o is MessageId ? Equals((MessageId) o) : false;
 

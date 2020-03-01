@@ -27,9 +27,10 @@ namespace DotPulsar
             Result            = FaultAction.Rethrow;
         }
 
-        public Exception         Exception         { set; get; }
         public CancellationToken CancellationToken { get; }
-        public bool              ExceptionHandled  { get; set; }
-        public FaultAction       Result            { get; set; }
+
+        public Exception   Exception        { get; set; }
+        public bool        ExceptionHandled { get; set; }
+        public FaultAction Result           { get; set; }
     }
 }

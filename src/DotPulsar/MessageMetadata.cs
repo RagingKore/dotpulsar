@@ -20,7 +20,8 @@ namespace DotPulsar
 
     public sealed class MessageMetadata
     {
-        internal Internal.PulsarApi.MessageMetadata Metadata;
+        internal readonly Internal.PulsarApi.MessageMetadata Metadata;
+
         public MessageMetadata() => Metadata = new Internal.PulsarApi.MessageMetadata();
 
         public long DeliverAtTime
@@ -71,9 +72,9 @@ namespace DotPulsar
             {
                 for (var i = 0; i < Metadata.Properties.Count; ++i)
                 {
-                    var keyValye = Metadata.Properties[i];
-                    if (keyValye.Key == key)
-                        return keyValye.Value;
+                    var keyValue = Metadata.Properties[i];
+                    if (keyValue.Key == key)
+                        return keyValue.Value;
                 }
 
                 return null;
@@ -82,11 +83,11 @@ namespace DotPulsar
             {
                 for (var i = 0; i < Metadata.Properties.Count; ++i)
                 {
-                    var keyValye = Metadata.Properties[i];
-                    if (keyValye.Key != key)
+                    var keyValue = Metadata.Properties[i];
+                    if (keyValue.Key != key)
                         continue;
 
-                    keyValye.Value = value;
+                    keyValue.Value = value;
                     return;
                 }
 

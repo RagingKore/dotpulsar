@@ -26,7 +26,8 @@ namespace DotPulsar
         readonly IConnectionPool  _connectionPool;
         readonly IHandleException _exceptionHandler;
         readonly ProcessManager   _processManager;
-        int              _isDisposed;
+
+        int _isDisposed;
 
         internal PulsarClient(IConnectionPool connectionPool, ProcessManager processManager, IHandleException exceptionHandler)
         {
