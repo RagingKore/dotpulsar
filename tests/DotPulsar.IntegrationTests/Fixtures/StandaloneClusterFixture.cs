@@ -12,19 +12,27 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.IntegrationTests.Fixtures
 {
-    using System.Threading;
+    using Abstraction;
+    using Services;
     using System.Threading.Tasks;
+    using Xunit;
 
-    /// <summary>
-    /// An abstraction for sending a message.
-    /// </summary>
-    public interface ISend<TMessage>
+    public class StandaloneClusterFixture : IAsyncLifetime
     {
-        /// <summary>
-        /// Sends a message with metadata.
-        /// </summary>
-        ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
+        public IPulsarService? PulsarService { private set; get; }
+
+        public async Task InitializeAsync()
+        {
+            PulsarService = ServiceFactory.CreatePulsarService();
+            await PulsarService.InitializeAsync();
+        }
+
+        public async Task DisposeAsync()
+        {
+            if (PulsarService != null)
+                await PulsarService.DisposeAsync();
+        }
     }
 }

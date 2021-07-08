@@ -12,19 +12,16 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.IntegrationTests.Services
 {
-    using System.Threading;
-    using System.Threading.Tasks;
+    using System;
 
-    /// <summary>
-    /// An abstraction for sending a message.
-    /// </summary>
-    public interface ISend<TMessage>
+    public sealed class StandaloneExternalService : PulsarServiceBase
     {
-        /// <summary>
-        /// Sends a message with metadata.
-        /// </summary>
-        ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
+        public override Uri GetBrokerUri()
+            => new ("pulsar://localhost:6650");
+
+        public override Uri GetWebServiceUri()
+            => new("http://localhost:8080");
     }
 }

@@ -65,31 +65,20 @@ namespace DotPulsar
             ThrowIfDisposed();
 
             ICompressorFactory? compressorFactory = null;
-
             if (options.CompressionType != CompressionType.None)
             {
                 var compressionType = (Internal.PulsarApi.CompressionType) options.CompressionType;
                 compressorFactory = CompressionFactories.CompressorFactories().SingleOrDefault(f => f.CompressionType == compressionType);
+
                 if (compressorFactory is null)
                     throw new CompressionException($"Support for {compressionType} compression was not found");
             }
 
-            var correlationId = Guid.NewGuid();
-            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
-            var topic = options.Topic;
-            var producerName = options.ProducerName;
-            var schema = options.Schema;
-            var initialSequenceId = options.InitialSequenceId;
+            var producer = new Producer<TMessage>(ServiceUrl, options, _processManager, _exceptionHandler, _connectionPool, compressorFactory);
 
-            var factory = new ProducerChannelFactory(correlationId, _processManager, _connectionPool, topic, producerName, schema.SchemaInfo, compressorFactory);
-            var stateManager = new StateManager<ProducerState>(ProducerState.Disconnected, ProducerState.Closed, ProducerState.Faulted);
-            var initialChannel = new NotReadyChannel<TMessage>();
-            var producer = new Producer<TMessage>(correlationId, ServiceUrl, topic, initialSequenceId, _processManager, initialChannel, executor, stateManager, factory, schema);
             if (options.StateChangedHandler is not null)
                 _ = StateMonitor.MonitorProducer(producer, options.StateChangedHandler);
-            var process = new ProducerProcess(correlationId, stateManager, producer);
-            _processManager.Add(process);
-            process.Start();
+
             return producer;
         }
 
@@ -101,10 +90,10 @@ namespace DotPulsar
             ThrowIfDisposed();
 
             var correlationId = Guid.NewGuid();
-            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
+            var consumerName = options.ConsumerName ?? $"Consumer-{correlationId:N}";
             var subscribe = new CommandSubscribe
             {
-                ConsumerName = options.ConsumerName,
+                ConsumerName = consumerName,
                 InitialPosition = (CommandSubscribe.InitialPositionType) options.InitialPosition,
                 PriorityLevel = options.PriorityLevel,
                 ReadCompacted = options.ReadCompacted,
@@ -119,6 +108,7 @@ namespace DotPulsar
             var factory = new ConsumerChannelFactory<TMessage>(correlationId, _processManager, _connectionPool, subscribe, messagePrefetchCount, batchHandler, messageFactory, decompressorFactories);
             var stateManager = new StateManager<ConsumerState>(ConsumerState.Disconnected, ConsumerState.Closed, ConsumerState.ReachedEndOfTopic, ConsumerState.Faulted);
             var initialChannel = new NotReadyChannel<TMessage>();
+            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
             var consumer = new Consumer<TMessage>(correlationId, ServiceUrl, options.SubscriptionName, options.Topic, _processManager, initialChannel, executor, stateManager, factory);
             if (options.StateChangedHandler is not null)
                 _ = StateMonitor.MonitorConsumer(consumer, options.StateChangedHandler);
@@ -136,14 +126,14 @@ namespace DotPulsar
             ThrowIfDisposed();
 
             var correlationId = Guid.NewGuid();
-            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
+            var subscription = $"Reader-{correlationId:N}";
             var subscribe = new CommandSubscribe
             {
-                ConsumerName = options.ReaderName,
+                ConsumerName = options.ReaderName ?? subscription,
                 Durable = false,
                 ReadCompacted = options.ReadCompacted,
                 StartMessageId = options.StartMessageId.ToMessageIdData(),
-                Subscription = $"Reader-{Guid.NewGuid():N}",
+                Subscription = subscription,
                 Topic = options.Topic
             };
             var messagePrefetchCount = options.MessagePrefetchCount;
@@ -153,6 +143,7 @@ namespace DotPulsar
             var factory = new ConsumerChannelFactory<TMessage>(correlationId, _processManager, _connectionPool, subscribe, messagePrefetchCount, batchHandler, messageFactory, decompressorFactories);
             var stateManager = new StateManager<ReaderState>(ReaderState.Disconnected, ReaderState.Closed, ReaderState.ReachedEndOfTopic, ReaderState.Faulted);
             var initialChannel = new NotReadyChannel<TMessage>();
+            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
             var reader = new Reader<TMessage>(correlationId, ServiceUrl, options.Topic, _processManager, initialChannel, executor, stateManager, factory);
             if (options.StateChangedHandler is not null)
                 _ = StateMonitor.MonitorReader(reader, options.StateChangedHandler);

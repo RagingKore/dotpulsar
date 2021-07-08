@@ -12,19 +12,10 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.IntegrationTests.Fixtures
 {
-    using System.Threading;
-    using System.Threading.Tasks;
+    using Xunit;
 
-    /// <summary>
-    /// An abstraction for sending a message.
-    /// </summary>
-    public interface ISend<TMessage>
-    {
-        /// <summary>
-        /// Sends a message with metadata.
-        /// </summary>
-        ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
-    }
+    [CollectionDefinition(nameof(StandaloneClusterTest))]
+    public class StandaloneClusterTest : ICollectionFixture<StandaloneClusterFixture> { }
 }

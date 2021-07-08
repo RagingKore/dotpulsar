@@ -26,6 +26,7 @@ namespace DotPulsar.Internal
         private ulong _initialSequenceId;
         private string? _topic;
         private IHandleStateChanged<ProducerStateChanged>? _stateChangedHandler;
+        private IMessageRouter? _messageRouter;
 
         public ProducerBuilder(IPulsarClient pulsarClient, ISchema<TMessage> schema)
         {
@@ -65,6 +66,12 @@ namespace DotPulsar.Internal
             return this;
         }
 
+        public IProducerBuilder<TMessage> MessageRouter(IMessageRouter messageRouter)
+        {
+            _messageRouter = messageRouter;
+            return this;
+        }
+
         public IProducer<TMessage> Create()
         {
             if (string.IsNullOrEmpty(_topic))
@@ -78,7 +85,10 @@ namespace DotPulsar.Internal
                 StateChangedHandler = _stateChangedHandler
             };
 
-            return _pulsarClient.CreateProducer<TMessage>(options);
+            if (_messageRouter is not null)
+                options.MessageRouter = _messageRouter;
+
+            return _pulsarClient.CreateProducer(options);
         }
     }
 }

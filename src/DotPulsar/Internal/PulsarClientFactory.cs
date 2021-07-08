@@ -12,19 +12,15 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Internal
 {
-    using System.Threading;
-    using System.Threading.Tasks;
+    using Abstractions;
+    using DotPulsar.Abstractions;
+    using System;
 
-    /// <summary>
-    /// An abstraction for sending a message.
-    /// </summary>
-    public interface ISend<TMessage>
+    public sealed class PulsarClientFactory
     {
-        /// <summary>
-        /// Sends a message with metadata.
-        /// </summary>
-        ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
+        public static PulsarClient CreatePulsarClient(IConnectionPool connectionPool, ProcessManager processManager, IHandleException exceptionHandler, Uri serviceUrl)
+            => new(connectionPool, processManager, exceptionHandler, serviceUrl);
     }
 }

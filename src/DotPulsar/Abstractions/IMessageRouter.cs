@@ -14,17 +14,14 @@
 
 namespace DotPulsar.Abstractions
 {
-    using System.Threading;
-    using System.Threading.Tasks;
-
     /// <summary>
-    /// An abstraction for sending a message.
+    /// A message routing abstraction
     /// </summary>
-    public interface ISend<TMessage>
+    public interface IMessageRouter
     {
         /// <summary>
-        /// Sends a message with metadata.
+        /// Choose a partition.
         /// </summary>
-        ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
+        int ChoosePartition(MessageMetadata messageMetadata, int numberOfPartitions);
     }
 }

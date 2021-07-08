@@ -12,36 +12,33 @@
  * limitations under the License.
  */
 
-namespace DotPulsar
+namespace DotPulsar.IntegrationTests.Abstraction
 {
+    using System;
+    using System.Net.Http;
+    using System.Threading.Tasks;
+    using Xunit;
+
     /// <summary>
-    /// The possible states a producer can be in.
+    /// Pulsar Service interface
     /// </summary>
-    public enum ProducerState : byte
+    public interface IPulsarService : IAsyncLifetime
     {
         /// <summary>
-        /// The producer is closed. This is a final state.
+        /// Get broker binary protocol uri
         /// </summary>
-        Closed,
+        Uri GetBrokerUri();
 
         /// <summary>
-        /// The producer is connected.
+        /// Get broker rest uri
         /// </summary>
-        Connected,
+        Uri GetWebServiceUri();
 
         /// <summary>
-        /// The producer is disconnected.
+        /// Create a partitioned topic
+        /// The format of the restTopic must be `{schema}/{tenant}/{namespace}/{topicName}`
+        /// For example, `persistent/public/default/test-topic`
         /// </summary>
-        Disconnected,
-
-        /// <summary>
-        /// The producer is faulted. This is a final state.
-        /// </summary>
-        Faulted,
-
-        /// <summary>
-        /// Some of the sub-producers are disconnected.
-        /// </summary>
-        PartiallyConnected
+        Task<HttpResponseMessage?> CreatePartitionedTopic(string restTopic, int numPartitions);
     }
 }
