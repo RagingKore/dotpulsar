@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,55 +12,62 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Exceptions;
+using DotPulsar.Internal.Abstractions;
+
+public sealed class ProducerProcess : Process
 {
-    using Abstractions;
-    using System;
-    using System.Threading.Tasks;
+    private readonly IStateManager<ProducerState> _stateManager;
+    private readonly IContainsChannel _subProducer;
 
-    public sealed class ProducerProcess : Process
+    public ProducerProcess(
+        Guid correlationId,
+        IStateManager<ProducerState> stateManager,
+        IContainsChannel producer) : base(correlationId)
     {
-        private readonly IStateManager<ProducerState> _stateManager;
-        private readonly IEstablishNewChannel _producer;
+        _stateManager = stateManager;
+        _subProducer = producer;
+    }
 
-        public ProducerProcess(
-            Guid correlationId,
-            IStateManager<ProducerState> stateManager,
-            IEstablishNewChannel producer) : base(correlationId)
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync().ConfigureAwait(false);
+        _stateManager.SetState(ProducerState.Closed);
+    }
+
+    protected override void CalculateState()
+    {
+        if (_stateManager.IsFinalState())
+            return;
+
+        if (ExecutorState == ExecutorState.Faulted)
         {
-            _stateManager = stateManager;
-            _producer = producer;
+            var newState = Exception is ProducerFencedException ? ProducerState.Fenced : ProducerState.Faulted;
+            var formerState = _stateManager.SetState(newState);
+            if (formerState != ProducerState.Faulted && formerState != ProducerState.Fenced)
+                ActionQueue.Enqueue(async _ => await _subProducer.ChannelFaulted(Exception!).ConfigureAwait(false));
+            return;
         }
 
-        public override async ValueTask DisposeAsync()
+        switch (ChannelState)
         {
-            _stateManager.SetState(ProducerState.Closed);
-            CancellationTokenSource.Cancel();
-            await _producer.DisposeAsync().ConfigureAwait(false);
-        }
-
-        protected override void CalculateState()
-        {
-            if (_stateManager.IsFinalState())
+            case ChannelState.ClosedByServer:
+            case ChannelState.Disconnected:
+                _stateManager.SetState(ProducerState.Disconnected);
+                ScheduleReconnect(_subProducer);
                 return;
-
-            if (ExecutorState == ExecutorState.Faulted)
-            {
-                _stateManager.SetState(ProducerState.Faulted);
-                return;
-            }
-
-            switch (ChannelState)
-            {
-                case ChannelState.ClosedByServer:
-                case ChannelState.Disconnected:
-                    _stateManager.SetState(ProducerState.Disconnected);
-                    _ = _producer.EstablishNewChannel(CancellationTokenSource.Token);
-                    return;
-                case ChannelState.Connected:
+            case ChannelState.Connected:
+                ActionQueue.Enqueue(x =>
+                {
                     _stateManager.SetState(ProducerState.Connected);
-                    return;
-            }
+                    return Task.CompletedTask;
+                });
+                return;
+            case ChannelState.WaitingForExclusive:
+                _stateManager.SetState(ProducerState.WaitingForExclusive);
+                return;
         }
     }
 }

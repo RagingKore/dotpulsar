@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Exceptions
+namespace DotPulsar.Exceptions;
+
+/// <summary>
+/// Transaction coordinator not found error
+/// </summary>
+public sealed class TransactionCoordinatorNotFoundException : DotPulsarException
 {
-    using System;
+    public TransactionCoordinatorNotFoundException(string message) : base(message) { }
 
-    public sealed class TransactionCoordinatorNotFoundException : DotPulsarException
-    {
-        public TransactionCoordinatorNotFoundException(string message) : base(message) { }
-
-        public TransactionCoordinatorNotFoundException(string message, Exception innerException) : base(message, innerException) { }
-    }
+    public TransactionCoordinatorNotFoundException(string message, Exception innerException) : base(message, innerException) { }
 }

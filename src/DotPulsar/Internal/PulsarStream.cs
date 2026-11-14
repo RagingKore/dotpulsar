@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,148 +12,151 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.Exceptions;
+using DotPulsar.Internal.Extensions;
+using System.Buffers;
+using System.IO.Pipelines;
+using System.Runtime.CompilerServices;
+
+public sealed class PulsarStream : IPulsarStream
 {
-    using Abstractions;
-    using Exceptions;
-    using Extensions;
-    using System;
-    using System.Buffers;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.IO.Pipelines;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private const int FrameSizePrefix = 4;
+    private const int UnknownFrameSize = 0;
+    private const long PauseAtMoreThan10Mb = 10485760;
+    private const long ResumeAt5MbOrLess = 5242881;
+    private const int ChunkSize = 75000;
 
-    public sealed class PulsarStream : IPulsarStream
+    private readonly Stream _stream;
+    private readonly ChunkingPipeline _pipeline;
+    private readonly Pipe _pipe;
+    private int _isDisposed;
+
+    public PulsarStream(Stream stream)
     {
-        private const long _pauseAtMoreThan10Mb = 10485760;
-        private const long _resumeAt5MbOrLess = 5242881;
-        private const int _chunkSize = 75000;
+        _stream = stream;
+        _pipeline = new ChunkingPipeline(stream, ChunkSize);
+        var options = new PipeOptions(pauseWriterThreshold: PauseAtMoreThan10Mb, resumeWriterThreshold: ResumeAt5MbOrLess);
+        _pipe = new Pipe(options);
+    }
 
-        private readonly Stream _stream;
-        private readonly ChunkingPipeline _pipeline;
-        private readonly PipeReader _reader;
-        private readonly PipeWriter _writer;
-        private int _isDisposed;
-
-        public PulsarStream(Stream stream)
-        {
-            _stream = stream;
-            _pipeline = new ChunkingPipeline(stream, _chunkSize);
-            var options = new PipeOptions(pauseWriterThreshold: _pauseAtMoreThan10Mb, resumeWriterThreshold: _resumeAt5MbOrLess);
-            var pipe = new Pipe(options);
-            _reader = pipe.Reader;
-            _writer = pipe.Writer;
-        }
-
-        public async Task Send(ReadOnlySequence<byte> sequence)
-        {
-            ThrowIfDisposed();
-            await _pipeline.Send(sequence).ConfigureAwait(false);
-        }
+    public async Task Send(ReadOnlySequence<byte> sequence)
+    {
+        ThrowIfDisposed();
+        await _pipeline.Send(sequence).ConfigureAwait(false);
+    }
 
 #if NETSTANDARD2_0
-        public ValueTask DisposeAsync()
-        {
-            if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
-                _stream.Dispose();
-            
-            return new ValueTask();
-        }
+    public ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+            _stream.Dispose();
+
+        return new ValueTask();
+    }
 #else
-        public async ValueTask DisposeAsync()
-        {
-            if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
-                await _stream.DisposeAsync().ConfigureAwait(false);
-        }
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 0)
+            await _stream.DisposeAsync().ConfigureAwait(false);
+    }
 #endif
 
-        private async Task FillPipe(CancellationToken cancellationToken)
-        {
-            await Task.Yield();
+    private async Task FillPipe(CancellationToken cancellationToken)
+    {
+        var writer = _pipe.Writer;
 
-            try
-            {
+        try
+        {
 #if NETSTANDARD2_0
-                var buffer = new byte[84999];
+            var buffer = new byte[84999];
 #endif
+            while (true)
+            {
+                var memory = writer.GetMemory(84999);
+#if NETSTANDARD2_0
+                var bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
+                new Memory<byte>(buffer, 0, bytesRead).CopyTo(memory);
+#else
+                var bytesRead = await _stream.ReadAsync(memory, cancellationToken).ConfigureAwait(false);
+#endif
+                if (bytesRead == 0)
+                    break;
+
+                writer.Advance(bytesRead);
+
+                var result = await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+                if (result.IsCompleted)
+                    break;
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+        finally
+        {
+            await writer.CompleteAsync().ConfigureAwait(false);
+        }
+    }
+
+    public async IAsyncEnumerable<ReadOnlySequence<byte>> Frames([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+
+        _ = Task.Factory.StartNew(async () => await FillPipe(cancellationToken).ConfigureAwait(false));
+
+        var reader = _pipe.Reader;
+
+        try
+        {
+            var frameSize = UnknownFrameSize;
+            var totalSize = 0;
+
+            while (true)
+            {
+                var minimumSize = FrameSizePrefix + frameSize;
+                var readResult = await reader.ReadAtLeastAsync(minimumSize, cancellationToken).ConfigureAwait(false);
+                var buffer = readResult.Buffer;
+
                 while (true)
                 {
-                    var memory = _writer.GetMemory(84999);
-#if NETSTANDARD2_0
-                    var bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
-                    new Memory<byte>(buffer, 0, bytesRead).CopyTo(memory);
-#else
-                    var bytesRead = await _stream.ReadAsync(memory, cancellationToken).ConfigureAwait(false);
-#endif
-                    if (bytesRead == 0)
+                    if (buffer.Length < FrameSizePrefix)
                         break;
 
-                    _writer.Advance(bytesRead);
-
-                    var result = await _writer.FlushAsync(cancellationToken).ConfigureAwait(false);
-
-                    if (result.IsCompleted)
-                        break;
-                }
-            }
-            catch
-            {
-                // ignored
-            }
-            finally
-            {
-                await _writer.CompleteAsync().ConfigureAwait(false);
-            }
-        }
-
-        public async IAsyncEnumerable<ReadOnlySequence<byte>> Frames([EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            ThrowIfDisposed();
-
-            _ = FillPipe(cancellationToken);
-
-            try
-            {
-                while (true)
-                {
-                    var result = await _reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                    var buffer = result.Buffer;
-
-                    while (true)
+                    if (frameSize == UnknownFrameSize)
                     {
-                        if (buffer.Length < 4)
-                            break;
-
-                        var frameSize = buffer.ReadUInt32(0, true);
-                        var totalSize = frameSize + 4;
-
-                        if (buffer.Length < totalSize)
-                            break;
-
-                        yield return buffer.Slice(4, frameSize);
-
-                        buffer = buffer.Slice(totalSize);
+                        frameSize = (int) buffer.ReadUInt32(0, true);
+                        totalSize = FrameSizePrefix + frameSize;
                     }
 
-                    if (result.IsCompleted)
+                    if (buffer.Length < totalSize)
                         break;
 
-                    _reader.AdvanceTo(buffer.Start);
-                }
-            }
-            finally
-            {
-                await _reader.CompleteAsync().ConfigureAwait(false);
-            }
-        }
+                    yield return buffer.Slice(FrameSizePrefix, frameSize);
 
-        private void ThrowIfDisposed()
-        {
-            if (_isDisposed != 0)
-                throw new PulsarStreamDisposedException();
+                    buffer = buffer.Slice(totalSize);
+                    frameSize = UnknownFrameSize;
+                }
+
+                if (readResult.IsCompleted || readResult.IsCanceled)
+                    break;
+
+                reader.AdvanceTo(buffer.Start);
+            }
         }
+        finally
+        {
+            await reader.CompleteAsync().ConfigureAwait(false);
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_isDisposed != 0)
+            throw new PulsarStreamDisposedException();
     }
 }

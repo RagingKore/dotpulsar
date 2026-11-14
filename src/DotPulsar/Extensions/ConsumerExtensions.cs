@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,111 +12,107 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Extensions
+namespace DotPulsar.Extensions;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Internal;
+
+/// <summary>
+/// Extensions for IConsumer.
+/// </summary>
+public static class ConsumerExtensions
 {
-    using DotPulsar.Abstractions;
-    using DotPulsar.Internal;
-    using DotPulsar.Internal.Extensions;
-    using System;
-    using System.Collections.Generic;
-    using System.Threading;
-    using System.Threading.Tasks;
+    /// <summary>
+    /// Acknowledge the consumption of a single message.
+    /// </summary>
+    public static async ValueTask Acknowledge(this IConsumer consumer, IMessage message, CancellationToken cancellationToken = default)
+        => await consumer.Acknowledge(message.MessageId, cancellationToken).ConfigureAwait(false);
 
     /// <summary>
-    /// Extensions for IConsumer.
+    /// Acknowledge the consumption of all the messages in the topic up to and including the provided message.
     /// </summary>
-    public static class ConsumerExtensions
+    public static async ValueTask AcknowledgeCumulative(this IConsumer consumer, IMessage message, CancellationToken cancellationToken = default)
+        => await consumer.AcknowledgeCumulative(message.MessageId, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Process and auto-acknowledge a message.
+    /// </summary>
+    public static async ValueTask Process<TMessage>(
+        this IConsumer<TMessage> consumer,
+        Func<IMessage<TMessage>, CancellationToken, ValueTask> processor,
+        ProcessingOptions options,
+        CancellationToken cancellationToken = default)
     {
-        /// <summary>
-        /// Acknowledge the consumption of a single message.
-        /// </summary>
-        public static async ValueTask Acknowledge(this IConsumer consumer, IMessage message, CancellationToken cancellationToken = default)
-            => await consumer.Acknowledge(message.MessageId, cancellationToken).ConfigureAwait(false);
+        using var messageProcessor = new MessageProcessor<TMessage>(consumer, processor, options);
+        await messageProcessor.Process(cancellationToken).ConfigureAwait(false);
+    }
 
-        /// <summary>
-        /// Acknowledge the consumption of all the messages in the topic up to and including the provided message.
-        /// </summary>
-        public static async ValueTask AcknowledgeCumulative(this IConsumer consumer, IMessage message, CancellationToken cancellationToken = default)
-            => await consumer.AcknowledgeCumulative(message.MessageId, cancellationToken).ConfigureAwait(false);
+    /// <summary>
+    /// Process and auto-acknowledge a message using the default processing options.
+    /// </summary>
+    public static async ValueTask Process<TMessage>(
+        this IConsumer<TMessage> consumer,
+        Func<IMessage<TMessage>, CancellationToken, ValueTask> processor,
+        CancellationToken cancellationToken = default)
+        => await Process(consumer, processor, new ProcessingOptions(), cancellationToken).ConfigureAwait(false);
 
-        /// <summary>
-        /// Process and auto-acknowledge a message.
-        /// </summary>
-        public static async ValueTask Process<TMessage>(
-            this IConsumer<TMessage> consumer,
-            Func<IMessage<TMessage>, CancellationToken, ValueTask> processor,
-            CancellationToken cancellationToken = default)
-        {
-            const string operation = "process";
-            var operationName = $"{consumer.Topic} {operation}";
+    /// <summary>
+    /// Wait for the state to change to a specific state.
+    /// </summary>
+    /// <returns>
+    /// The current state.
+    /// </returns>
+    /// <remarks>
+    /// If the state change to a final state, then all awaiting tasks will complete.
+    /// </remarks>
+    public static async ValueTask<ConsumerStateChanged> StateChangedTo(this IConsumer consumer, ConsumerState state, CancellationToken cancellationToken = default)
+    {
+        var currentState = await consumer.State.OnStateChangeTo(state, cancellationToken).ConfigureAwait(false);
+        return new ConsumerStateChanged(consumer, currentState);
+    }
 
-            var tags = new KeyValuePair<string, object?>[]
-            {
-                new KeyValuePair<string, object?>("messaging.destination", consumer.Topic),
-                new KeyValuePair<string, object?>("messaging.destination_kind", "topic"),
-                new KeyValuePair<string, object?>("messaging.operation", operation),
-                new KeyValuePair<string, object?>("messaging.system", "pulsar"),
-                new KeyValuePair<string, object?>("messaging.url", consumer.ServiceUrl),
-                new KeyValuePair<string, object?>("messaging.pulsar.subscription", consumer.SubscriptionName)
-            };
+    /// <summary>
+    /// Wait for the state to change to a specific state with a delay.
+    /// </summary>
+    /// <returns>
+    /// The current state.
+    /// </returns>
+    /// <remarks>
+    /// If the state change to a final state, then all awaiting tasks will complete.
+    /// </remarks>
+    public static async ValueTask<ConsumerStateChanged> StateChangedTo(this IConsumer consumer, ConsumerState state, TimeSpan delay, CancellationToken cancellationToken = default)
+    {
+        var currentState = await consumer.State.OnStateChangeTo(state, delay, cancellationToken).ConfigureAwait(false);
+        return new ConsumerStateChanged(consumer, currentState);
+    }
 
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var message = await consumer.Receive(cancellationToken).ConfigureAwait(false);
+    /// <summary>
+    /// Wait for the state to change from a specific state.
+    /// </summary>
+    /// <returns>
+    /// The current state.
+    /// </returns>
+    /// <remarks>
+    /// If the state change to a final state, then all awaiting tasks will complete.
+    /// </remarks>
+    public static async ValueTask<ConsumerStateChanged> StateChangedFrom(this IConsumer consumer, ConsumerState state, CancellationToken cancellationToken = default)
+    {
+        var currentState = await consumer.State.OnStateChangeFrom(state, cancellationToken).ConfigureAwait(false);
+        return new ConsumerStateChanged(consumer, currentState);
+    }
 
-                var activity = DotPulsarActivitySource.StartConsumerActivity(message, operationName, tags);
-
-                if (activity is not null && activity.IsAllDataRequested)
-                {
-                    activity.SetMessageId(message.MessageId);
-                    activity.SetPayloadSize(message.Data.Length);
-                    activity.SetStatusCode("OK");
-                }
-
-                try
-                {
-                    await processor(message, cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception exception)
-                {
-                    if (activity is not null && activity.IsAllDataRequested)
-                        activity.AddException(exception);
-                }
-
-                activity?.Dispose();
-
-                await consumer.Acknowledge(message.MessageId, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        /// Wait for the state to change to a specific state.
-        /// </summary>
-        /// <returns>
-        /// The current state.
-        /// </returns>
-        /// <remarks>
-        /// If the state change to a final state, then all awaiting tasks will complete.
-        /// </remarks>
-        public static async ValueTask<ConsumerStateChanged> StateChangedTo(this IConsumer consumer, ConsumerState state, CancellationToken cancellationToken = default)
-        {
-            var newState = await consumer.OnStateChangeTo(state, cancellationToken).ConfigureAwait(false);
-            return new ConsumerStateChanged(consumer, newState);
-        }
-
-        /// <summary>
-        /// Wait for the state to change from a specific state.
-        /// </summary>
-        /// <returns>
-        /// The current state.
-        /// </returns>
-        /// <remarks>
-        /// If the state change to a final state, then all awaiting tasks will complete.
-        /// </remarks>
-        public static async ValueTask<ConsumerStateChanged> StateChangedFrom(this IConsumer consumer, ConsumerState state, CancellationToken cancellationToken = default)
-        {
-            var newState = await consumer.OnStateChangeFrom(state, cancellationToken).ConfigureAwait(false);
-            return new ConsumerStateChanged(consumer, newState);
-        }
+    /// <summary>
+    /// Wait for the state to change from a specific state with delay.
+    /// </summary>
+    /// <returns>
+    /// The current state.
+    /// </returns>
+    /// <remarks>
+    /// If the state change to a final state, then all awaiting tasks will complete.
+    /// </remarks>
+    public static async ValueTask<ConsumerStateChanged> StateChangedFrom(this IConsumer consumer, ConsumerState state, TimeSpan delay, CancellationToken cancellationToken = default)
+    {
+        var currentState = await consumer.State.OnStateChangeFrom(state, delay, cancellationToken).ConfigureAwait(false);
+        return new ConsumerStateChanged(consumer, currentState);
     }
 }

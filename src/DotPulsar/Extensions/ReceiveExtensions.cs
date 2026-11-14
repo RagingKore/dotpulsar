@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,25 +12,53 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Extensions
+namespace DotPulsar.Extensions;
+
+using DotPulsar.Abstractions;
+using Microsoft.Extensions.ObjectPool;
+using System.Runtime.CompilerServices;
+
+/// <summary>
+/// Extensions for IReceive.
+/// </summary>
+public static class ReceiveExtensions
 {
-    using DotPulsar.Abstractions;
-    using System.Collections.Generic;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
+    static ReceiveExtensions()
+    {
+        var policy = new DefaultPooledObjectPolicy<CancellationTokenSource>();
+        _ctsPool = new DefaultObjectPool<CancellationTokenSource>(policy);
+    }
+
+    private static readonly ObjectPool<CancellationTokenSource> _ctsPool;
 
     /// <summary>
-    /// Extensions for IReceive.
+    /// Will return true (and a message) if a message is buffered or false otherwise.
     /// </summary>
-    public static class ReceiveExtensions
+    public static bool TryReceive<TMessage>(this IReceive<TMessage> receiver, out TMessage? message)
     {
-        /// <summary>
-        /// Get an IAsyncEnumerable for receiving messages.
-        /// </summary>
-        public static async IAsyncEnumerable<TMessage> Messages<TMessage>(this IReceive<TMessage> receiver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-                yield return await receiver.Receive(cancellationToken).ConfigureAwait(false);
-        }
+
+        var cts = _ctsPool.Get();
+        var messageTask = receiver.Receive(cts.Token);
+
+        if (!messageTask.IsCompleted)
+            cts.Cancel();
+        else
+            _ctsPool.Return(cts);
+
+        if (messageTask.IsCompletedSuccessfully)
+            message = messageTask.Result;
+        else
+            message = default;
+
+        return messageTask.IsCompletedSuccessfully;
+    }
+
+    /// <summary>
+    /// Get an IAsyncEnumerable for receiving messages.
+    /// </summary>
+    public static async IAsyncEnumerable<TMessage> Messages<TMessage>(this IReceive<TMessage> receiver, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+            yield return await receiver.Receive(cancellationToken).ConfigureAwait(false);
     }
 }

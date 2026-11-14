@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,13 +12,11 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
-{
-    using System;
-    using System.Buffers;
+namespace DotPulsar.Internal.Abstractions;
 
-    public interface IDecompress : IDisposable
-    {
-        ReadOnlySequence<byte> Decompress(ReadOnlySequence<byte> data, int decompressedSize);
-    }
+using System.Buffers;
+
+public interface IDecompress : IDisposable
+{
+    ReadOnlySequence<byte> Decompress(ReadOnlySequence<byte> data, int decompressedSize);
 }

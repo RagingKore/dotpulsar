@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,70 +12,85 @@
  * limitations under the License.
  */
 
-namespace DotPulsar
+namespace DotPulsar;
+
+using DotPulsar.Abstractions;
+
+/// <summary>
+/// The reader building options.
+/// </summary>
+public sealed class ReaderOptions<TMessage>
 {
-    using DotPulsar.Abstractions;
+    /// <summary>
+    /// The default message prefetch count.
+    /// </summary>
+    public static readonly uint DefaultMessagePrefetchCount = 1000;
 
     /// <summary>
-    /// The reader building options.
+    /// The default of whether to read compacted.
     /// </summary>
-    public sealed class ReaderOptions<TMessage>
+    public static readonly bool DefaultReadCompacted = false;
+
+    /// <summary>
+    /// The default subscription role prefix.
+    /// </summary>
+    public static readonly string DefaultSubscriptionRolePrefix = "Reader";
+
+    /// <summary>
+    /// Initializes a new instance using the specified startMessageId and topic.
+    /// </summary>
+    public ReaderOptions(MessageId startMessageId, string topic, ISchema<TMessage> schema)
     {
-        /// <summary>
-        /// The default message prefetch count.
-        /// </summary>
-        public static readonly uint DefaultMessagePrefetchCount = 1000;
-
-        /// <summary>
-        /// The default of whether to read compacted.
-        /// </summary>
-        public static readonly bool DefaultReadCompacted = false;
-
-        /// <summary>
-        /// Initializes a new instance using the specified startMessageId and topic.
-        /// </summary>
-        public ReaderOptions(MessageId startMessageId, string topic, ISchema<TMessage> schema)
-        {
-            MessagePrefetchCount = DefaultMessagePrefetchCount;
-            ReadCompacted = DefaultReadCompacted;
-            StartMessageId = startMessageId;
-            Topic = topic;
-            Schema = schema;
-        }
-
-        /// <summary>
-        /// Number of messages that will be prefetched. The default is 1000.
-        /// </summary>
-        public uint MessagePrefetchCount { get; set; }
-
-        /// <summary>
-        /// Whether to read from the compacted topic. The default is 'false'.
-        /// </summary>
-        public bool ReadCompacted { get; set; }
-
-        /// <summary>
-        /// Set the reader name. This is optional.
-        /// </summary>
-        public string? ReaderName { get; set; }
-
-        /// <summary>
-        /// Set the schema. This is required.
-        /// </summary>
-        public ISchema<TMessage> Schema { get; set; }
-
-        /// <summary>
-        /// The initial reader position is set to the specified message id. This is required.
-        /// </summary>
-        public MessageId StartMessageId { get; set; }
-
-        /// <summary>
-        /// Register a state changed handler. This is optional.
-        /// </summary>
-        public IHandleStateChanged<ReaderStateChanged>? StateChangedHandler { get; set; }
-
-        /// <summary>
-        /// Set the topic for this reader. This is required.
-        /// </summary>
-        public string Topic { get; set; }
+        MessagePrefetchCount = DefaultMessagePrefetchCount;
+        ReadCompacted = DefaultReadCompacted;
+        StartMessageId = startMessageId;
+        SubscriptionRolePrefix = DefaultSubscriptionRolePrefix;
+        Topic = topic;
+        Schema = schema;
     }
+
+    /// <summary>
+    /// Number of messages that will be prefetched. The default is 1000.
+    /// </summary>
+    public uint MessagePrefetchCount { get; set; }
+
+    /// <summary>
+    /// Whether to read from the compacted topic. The default is 'false'.
+    /// </summary>
+    public bool ReadCompacted { get; set; }
+
+    /// <summary>
+    /// Set the reader name. This is optional.
+    /// </summary>
+    public string? ReaderName { get; set; }
+
+    /// <summary>
+    /// Set the schema. This is required.
+    /// </summary>
+    public ISchema<TMessage> Schema { get; set; }
+
+    /// <summary>
+    /// The initial reader position is set to the specified message id. This is required.
+    /// </summary>
+    public MessageId StartMessageId { get; set; }
+
+    /// <summary>
+    /// Register a state changed handler. This is optional.
+    /// </summary>
+    public IHandleStateChanged<ReaderStateChanged>? StateChangedHandler { get; set; }
+
+    /// <summary>
+    /// Set the subscription name for this reader. This is optional.
+    /// </summary>
+    public string? SubscriptionName { get; set; }
+
+    /// <summary>
+    /// Set the subscription role prefix for this reader. The default is 'Reader'. This is optional.
+    /// </summary>
+    public string SubscriptionRolePrefix { get; set; }
+
+    /// <summary>
+    /// Set the topic for this reader. This is required.
+    /// </summary>
+    public string Topic { get; set; }
 }

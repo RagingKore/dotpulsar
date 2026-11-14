@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,13 +12,9 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
-{
-    using System.Threading;
-    using System.Threading.Tasks;
+namespace DotPulsar.Internal.Abstractions;
 
-    public interface IDequeue<T>
-    {
-        ValueTask<T> Dequeue(CancellationToken cancellationToken = default);
-    }
+public interface IDequeue<T>
+{
+    ValueTask<T> Dequeue(CancellationToken cancellationToken = default);
 }

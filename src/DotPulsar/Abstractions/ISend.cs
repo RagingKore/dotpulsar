@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,19 +12,16 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
-{
-    using System.Threading;
-    using System.Threading.Tasks;
+namespace DotPulsar.Abstractions;
 
+/// <summary>
+/// An abstraction for sending a message.
+/// </summary>
+public interface ISend<TMessage>
+{
     /// <summary>
-    /// An abstraction for sending a message.
+    /// Sends a message with metadata.
     /// </summary>
-    public interface ISend<TMessage>
-    {
-        /// <summary>
-        /// Sends a message with metadata.
-        /// </summary>
-        ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
-    }
+    /// <returns>ValueTask which completes when the Broker acknowledgement has been received.</returns>
+    ValueTask<MessageId> Send(MessageMetadata metadata, TMessage message, CancellationToken cancellationToken = default);
 }

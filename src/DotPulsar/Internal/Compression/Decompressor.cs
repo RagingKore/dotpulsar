@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,27 +12,25 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Compression
+namespace DotPulsar.Internal.Compression;
+
+using DotPulsar.Internal.Abstractions;
+using System.Buffers;
+
+public sealed class Decompressor : IDecompress
 {
-    using DotPulsar.Internal.Abstractions;
-    using System;
-    using System.Buffers;
+    private readonly IDisposable? _disposable;
+    private readonly Func<ReadOnlySequence<byte>, int, ReadOnlySequence<byte>> _decompress;
 
-    public sealed class Decompressor : IDecompress
+    public Decompressor(Func<ReadOnlySequence<byte>, int, ReadOnlySequence<byte>> decompress, IDisposable? disposable = null)
     {
-        private readonly IDisposable? _disposable;
-        private readonly Func<ReadOnlySequence<byte>, int, ReadOnlySequence<byte>> _decompress;
-
-        public Decompressor(Func<ReadOnlySequence<byte>, int, ReadOnlySequence<byte>> decompress, IDisposable? disposable = null)
-        {
-            _disposable = disposable;
-            _decompress = decompress;
-        }
-
-        public ReadOnlySequence<byte> Decompress(ReadOnlySequence<byte> data, int decompressedSize)
-            => _decompress(data, decompressedSize);
-
-        public void Dispose()
-            => _disposable?.Dispose();
+        _disposable = disposable;
+        _decompress = decompress;
     }
+
+    public ReadOnlySequence<byte> Decompress(ReadOnlySequence<byte> data, int decompressedSize)
+        => _decompress(data, decompressedSize);
+
+    public void Dispose()
+        => _disposable?.Dispose();
 }

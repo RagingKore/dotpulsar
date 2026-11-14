@@ -1,0 +1,123 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+namespace DotPulsar;
+
+/// <summary>
+/// The processing options.
+/// </summary>
+public sealed class ProcessingOptions
+{
+    /// <summary>
+    /// The value used to represent unlimited processing of messages per task.
+    /// </summary>
+    public const int Unbounded = -1;
+
+    private bool _ensureOrderedAcknowledgment;
+    private bool _linkTraces;
+    private int _maxDegreeOfParallelism;
+    private int _maxMessagesPerTask;
+    private TimeSpan _shutdownGracePeriod;
+    private TaskScheduler _taskScheduler;
+
+    /// <summary>
+    /// Initializes a new instance with the default values.
+    /// </summary>
+    public ProcessingOptions()
+    {
+        _ensureOrderedAcknowledgment = true;
+        _linkTraces = false;
+        _maxDegreeOfParallelism = 1;
+        _maxMessagesPerTask = Unbounded;
+        _shutdownGracePeriod = TimeSpan.Zero;
+        _taskScheduler = TaskScheduler.Default;
+    }
+
+    /// <summary>
+    /// Whether ordered acknowledgment should be enforced. The default is 'true'.
+    /// </summary>
+    public bool EnsureOrderedAcknowledgment
+    {
+        get => _ensureOrderedAcknowledgment;
+        set { _ensureOrderedAcknowledgment = value; }
+    }
+
+    /// <summary>
+    /// Whether to link the process trace to the message's send trace, if tracing is enabled. The default is 'false'.
+    /// </summary>
+    public bool LinkTraces
+    {
+        get => _linkTraces;
+        set { _linkTraces = value; }
+    }
+
+    /// <summary>
+    /// The maximum number of messages that may be processed concurrently. The default is 1.
+    /// </summary>
+    public int MaxDegreeOfParallelism
+    {
+        get => _maxDegreeOfParallelism;
+        set
+        {
+            if (value < 1)
+                throw new ArgumentOutOfRangeException(nameof(value));
+
+            _maxDegreeOfParallelism = value;
+        }
+    }
+
+    /// <summary>
+    /// The maximum number of messages that may be processed per task. The default is -1 (unlimited).
+    /// </summary>
+    public int MaxMessagesPerTask
+    {
+        get => _maxMessagesPerTask;
+        set
+        {
+            if (value < 1 && value != Unbounded)
+                throw new ArgumentOutOfRangeException(nameof(value));
+
+            _maxMessagesPerTask = value;
+        }
+    }
+
+    /// <summary>
+    /// The amount of time we give the active tasks to finish. The Default is TimeSpan.Zero, meaning no graceful shutdown.
+    /// </summary>
+    public TimeSpan ShutdownGracePeriod
+    {
+        get => _shutdownGracePeriod;
+        set
+        {
+            if (value < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "ShutdownGracePeriod must be zero or above");
+            _shutdownGracePeriod = value;
+        }
+    }
+
+    /// <summary>
+    /// The TaskScheduler to use for scheduling tasks. The default is TaskScheduler.Default.
+    /// </summary>
+    public TaskScheduler TaskScheduler
+    {
+        get => _taskScheduler;
+        set
+        {
+            if (value is null)
+                throw new ArgumentNullException(nameof(value));
+
+            _taskScheduler = value;
+        }
+    }
+}

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,17 +12,13 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
-{
-    using PulsarApi;
-    using System;
-    using System.Buffers;
-    using System.Threading;
-    using System.Threading.Tasks;
+namespace DotPulsar.Internal.Abstractions;
 
-    public interface IProducerChannel : IAsyncDisposable
-    {
-        Task<CommandSendReceipt> Send(MessageMetadata metadata, ReadOnlySequence<byte> payload, CancellationToken cancellationToken);
-        ValueTask ClosedByClient(CancellationToken cancellationToken);
-    }
+using DotPulsar.Internal.PulsarApi;
+using System.Buffers;
+
+public interface IProducerChannel : IAsyncDisposable
+{
+    Task Send(MessageMetadata metadata, ReadOnlySequence<byte> payload, TaskCompletionSource<BaseCommand> responseTcs, CancellationToken cancellationToken);
+    ValueTask ClosedByClient(CancellationToken cancellationToken);
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,165 +12,152 @@
  * limitations under the License.
  */
 
-namespace DotPulsar
+namespace DotPulsar;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Exceptions;
+using DotPulsar.Extensions;
+using DotPulsar.Internal;
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.Compression;
+
+/// <summary>
+/// Pulsar client for creating producers, consumers and readers.
+/// </summary>
+public sealed class PulsarClient : IPulsarClient
 {
-    using Abstractions;
-    using DotPulsar.Internal.Compression;
-    using DotPulsar.Internal.PulsarApi;
-    using Exceptions;
-    using Internal;
-    using Internal.Abstractions;
-    using System;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly object _lock = new();
+    private readonly HashSet<IAsyncDisposable> _disposables;
+    private readonly IConnectionPool _connectionPool;
+    private readonly IHandleException _exceptionHandler;
+    private int _isDisposed;
+
+    public Uri ServiceUrl { get; }
+
+    internal PulsarClient(
+        IConnectionPool connectionPool,
+        IHandleException exceptionHandler,
+        Uri serviceUrl)
+    {
+        _disposables = [];
+        _connectionPool = connectionPool;
+        _exceptionHandler = exceptionHandler;
+        ServiceUrl = serviceUrl;
+        _isDisposed = 0;
+        DotPulsarMeter.ClientCreated();
+    }
 
     /// <summary>
-    /// Pulsar client for creating producers, consumers and readers.
+    /// Get a builder that can be used to configure and build a PulsarClient instance.
     /// </summary>
-    public sealed class PulsarClient : IPulsarClient
+    public static IPulsarClientBuilder Builder()
+        => new PulsarClientBuilder();
+
+    /// <summary>
+    /// Create a producer.
+    /// </summary>
+    public IProducer<TMessage> CreateProducer<TMessage>(ProducerOptions<TMessage> options)
     {
-        private readonly IConnectionPool _connectionPool;
-        private readonly ProcessManager _processManager;
-        private readonly IHandleException _exceptionHandler;
-        private int _isDisposed;
+        ThrowIfDisposed();
 
-        public Uri ServiceUrl { get; }
+        if (options.MaxPendingMessages == 0)
+            throw new ConfigurationException("ProducerOptions.MaxPendingMessages must be greater than 0");
 
-        internal PulsarClient(
-            IConnectionPool connectionPool,
-            ProcessManager processManager,
-            IHandleException exceptionHandler,
-            Uri serviceUrl)
+        ICompressorFactory? compressorFactory = null;
+        if (options.CompressionType != CompressionType.None)
         {
-            _connectionPool = connectionPool;
-            _processManager = processManager;
-            _exceptionHandler = exceptionHandler;
-            ServiceUrl = serviceUrl;
-            _isDisposed = 0;
-            DotPulsarEventSource.Log.ClientCreated();
+            var compressionType = (Internal.PulsarApi.CompressionType) options.CompressionType;
+            compressorFactory = CompressionFactories.CompressorFactories().SingleOrDefault(f => f.CompressionType == compressionType);
+
+            if (compressorFactory is null)
+                throw new CompressionException($"Support for {compressionType} compression was not found");
         }
 
-        /// <summary>
-        /// Get a builder that can be used to configure and build a PulsarClient instance.
-        /// </summary>
-        public static IPulsarClientBuilder Builder()
-            => new PulsarClientBuilder();
+        var producer = new Producer<TMessage>(ServiceUrl, options, _exceptionHandler, _connectionPool, compressorFactory);
 
-        /// <summary>
-        /// Create a producer.
-        /// </summary>
-        public IProducer<TMessage> CreateProducer<TMessage>(ProducerOptions<TMessage> options)
+        if (options.StateChangedHandler is not null)
+            _ = StateMonitor.MonitorProducer(producer, options.StateChangedHandler);
+
+        AddDisposable(producer);
+        producer.StateChangedTo(ProducerState.Closed).AsTask().ContinueWith(_ => RemoveDisposable(producer));
+        return producer;
+    }
+
+    /// <summary>
+    /// Create a consumer.
+    /// </summary>
+    public IConsumer<TMessage> CreateConsumer<TMessage>(ConsumerOptions<TMessage> options)
+    {
+        ThrowIfDisposed();
+
+        var consumer = new Consumer<TMessage>(ServiceUrl, options, _connectionPool, _exceptionHandler);
+        if (options.StateChangedHandler is not null)
+            _ = StateMonitor.MonitorConsumer(consumer, options.StateChangedHandler);
+
+        AddDisposable(consumer);
+        consumer.StateChangedTo(ConsumerState.Closed).AsTask().ContinueWith(_ => RemoveDisposable(consumer));
+        return consumer;
+    }
+
+    /// <summary>
+    /// Create a reader.
+    /// </summary>
+    public IReader<TMessage> CreateReader<TMessage>(ReaderOptions<TMessage> options)
+    {
+        ThrowIfDisposed();
+
+        var reader = new Reader<TMessage>(ServiceUrl, options, _exceptionHandler, _connectionPool);
+        if (options.StateChangedHandler is not null)
+            _ = StateMonitor.MonitorReader(reader, options.StateChangedHandler);
+
+        AddDisposable(reader);
+        reader.StateChangedTo(ReaderState.Closed).AsTask().ContinueWith(_ => RemoveDisposable(reader));
+        return reader;
+    }
+
+    /// <summary>
+    /// Dispose the client and all its producers, consumers and readers.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            return;
+
+        IEnumerable<IAsyncDisposable> disposables;
+
+        lock (_lock)
         {
-            ThrowIfDisposed();
-
-            ICompressorFactory? compressorFactory = null;
-            if (options.CompressionType != CompressionType.None)
-            {
-                var compressionType = (Internal.PulsarApi.CompressionType) options.CompressionType;
-                compressorFactory = CompressionFactories.CompressorFactories().SingleOrDefault(f => f.CompressionType == compressionType);
-
-                if (compressorFactory is null)
-                    throw new CompressionException($"Support for {compressionType} compression was not found");
-            }
-
-            var producer = new Producer<TMessage>(ServiceUrl, options, _processManager, _exceptionHandler, _connectionPool, compressorFactory);
-
-            if (options.StateChangedHandler is not null)
-                _ = StateMonitor.MonitorProducer(producer, options.StateChangedHandler);
-
-            return producer;
+            disposables = _disposables.ToArray();
+            _disposables.Clear();
         }
 
-        /// <summary>
-        /// Create a consumer.
-        /// </summary>
-        public IConsumer<TMessage> CreateConsumer<TMessage>(ConsumerOptions<TMessage> options)
+        foreach (var item in disposables)
+            await item.DisposeAsync().ConfigureAwait(false);
+
+        await _connectionPool.DisposeAsync().ConfigureAwait(false);
+
+        DotPulsarMeter.ClientDisposed();
+    }
+
+    private void AddDisposable(IAsyncDisposable disposable)
+    {
+        lock (_lock)
         {
-            ThrowIfDisposed();
-
-            var correlationId = Guid.NewGuid();
-            var consumerName = options.ConsumerName ?? $"Consumer-{correlationId:N}";
-            var subscribe = new CommandSubscribe
-            {
-                ConsumerName = consumerName,
-                InitialPosition = (CommandSubscribe.InitialPositionType) options.InitialPosition,
-                PriorityLevel = options.PriorityLevel,
-                ReadCompacted = options.ReadCompacted,
-                Subscription = options.SubscriptionName,
-                Topic = options.Topic,
-                Type = (CommandSubscribe.SubType) options.SubscriptionType
-            };
-            var messagePrefetchCount = options.MessagePrefetchCount;
-            var messageFactory = new MessageFactory<TMessage>(options.Schema);
-            var batchHandler = new BatchHandler<TMessage>(true, messageFactory);
-            var decompressorFactories = CompressionFactories.DecompressorFactories();
-            var factory = new ConsumerChannelFactory<TMessage>(correlationId, _processManager, _connectionPool, subscribe, messagePrefetchCount, batchHandler, messageFactory, decompressorFactories);
-            var stateManager = new StateManager<ConsumerState>(ConsumerState.Disconnected, ConsumerState.Closed, ConsumerState.ReachedEndOfTopic, ConsumerState.Faulted);
-            var initialChannel = new NotReadyChannel<TMessage>();
-            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
-            var consumer = new Consumer<TMessage>(correlationId, ServiceUrl, options.SubscriptionName, options.Topic, _processManager, initialChannel, executor, stateManager, factory);
-            if (options.StateChangedHandler is not null)
-                _ = StateMonitor.MonitorConsumer(consumer, options.StateChangedHandler);
-            var process = new ConsumerProcess(correlationId, stateManager, consumer, options.SubscriptionType == SubscriptionType.Failover);
-            _processManager.Add(process);
-            process.Start();
-            return consumer;
+            _disposables.Add(disposable);
         }
+    }
 
-        /// <summary>
-        /// Create a reader.
-        /// </summary>
-        public IReader<TMessage> CreateReader<TMessage>(ReaderOptions<TMessage> options)
+    internal void RemoveDisposable(IAsyncDisposable disposable)
+    {
+        lock (_lock)
         {
-            ThrowIfDisposed();
-
-            var correlationId = Guid.NewGuid();
-            var subscription = $"Reader-{correlationId:N}";
-            var subscribe = new CommandSubscribe
-            {
-                ConsumerName = options.ReaderName ?? subscription,
-                Durable = false,
-                ReadCompacted = options.ReadCompacted,
-                StartMessageId = options.StartMessageId.ToMessageIdData(),
-                Subscription = subscription,
-                Topic = options.Topic
-            };
-            var messagePrefetchCount = options.MessagePrefetchCount;
-            var messageFactory = new MessageFactory<TMessage>(options.Schema);
-            var batchHandler = new BatchHandler<TMessage>(false, messageFactory);
-            var decompressorFactories = CompressionFactories.DecompressorFactories();
-            var factory = new ConsumerChannelFactory<TMessage>(correlationId, _processManager, _connectionPool, subscribe, messagePrefetchCount, batchHandler, messageFactory, decompressorFactories);
-            var stateManager = new StateManager<ReaderState>(ReaderState.Disconnected, ReaderState.Closed, ReaderState.ReachedEndOfTopic, ReaderState.Faulted);
-            var initialChannel = new NotReadyChannel<TMessage>();
-            var executor = new Executor(correlationId, _processManager, _exceptionHandler);
-            var reader = new Reader<TMessage>(correlationId, ServiceUrl, options.Topic, _processManager, initialChannel, executor, stateManager, factory);
-            if (options.StateChangedHandler is not null)
-                _ = StateMonitor.MonitorReader(reader, options.StateChangedHandler);
-            var process = new ReaderProcess(correlationId, stateManager, reader);
-            _processManager.Add(process);
-            process.Start();
-            return reader;
+            _disposables.Remove(disposable);
         }
+    }
 
-        /// <summary>
-        /// Dispose the client and all its producers, consumers and readers.
-        /// </summary>
-        public async ValueTask DisposeAsync()
-        {
-            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
-                return;
-
-            if (_processManager is IAsyncDisposable disposable)
-                await disposable.DisposeAsync().ConfigureAwait(false);
-
-            DotPulsarEventSource.Log.ClientDisposed();
-        }
-
-        private void ThrowIfDisposed()
-        {
-            if (_isDisposed != 0)
-                throw new PulsarClientDisposedException();
-        }
+    private void ThrowIfDisposed()
+    {
+        if (_isDisposed != 0)
+            throw new PulsarClientDisposedException();
     }
 }

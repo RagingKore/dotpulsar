@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,40 +12,58 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
+namespace DotPulsar.Internal.Abstractions;
+
+using DotPulsar.Internal.Events;
+
+public abstract class Process : IProcess
 {
-    using Events;
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly object _stateLock = new object();
+    private int _isReconnecting;
+    protected readonly AsyncQueue<Func<CancellationToken, Task>> ActionQueue;
+    private Task? _actionProcessorTask;
+    protected ChannelState ChannelState;
+    protected ExecutorState ExecutorState;
+    protected Exception? Exception;
 
-    public abstract class Process : IProcess
+    protected Process(Guid correlationId)
     {
-        protected readonly CancellationTokenSource CancellationTokenSource;
-        protected ChannelState ChannelState;
-        protected ExecutorState ExecutorState;
+        _cancellationTokenSource = new CancellationTokenSource();
+        ActionQueue = new AsyncQueue<Func<CancellationToken, Task>>();
+        ChannelState = ChannelState.Disconnected;
+        ExecutorState = ExecutorState.Ok;
+        CorrelationId = correlationId;
+    }
 
-        protected Process(Guid correlationId)
+    public Guid CorrelationId { get; }
+
+    public void Start()
+    {
+        _actionProcessorTask = ProcessActions(_cancellationTokenSource.Token);
+
+        lock (_stateLock)
         {
-            CancellationTokenSource = new CancellationTokenSource();
-            ChannelState = ChannelState.Disconnected;
-            ExecutorState = ExecutorState.Ok;
-            CorrelationId = correlationId;
+            CalculateState();
         }
+    }
 
-        public Guid CorrelationId { get; }
+    public virtual async ValueTask DisposeAsync()
+    {
+        _cancellationTokenSource.Cancel();
+        if (_actionProcessorTask is not null)
+            await _actionProcessorTask.ConfigureAwait(false);
+    }
 
-        public void Start()
-            => CalculateState();
-
-        public abstract ValueTask DisposeAsync();
-
-        public void Handle(IEvent e)
+    public void Handle(IEvent e)
+    {
+        lock (_stateLock)
         {
             switch (e)
             {
-                case ExecutorFaulted _:
+                case ExecutorFaulted executorFaulted:
                     ExecutorState = ExecutorState.Faulted;
+                    Exception = executorFaulted.Exception;
                     break;
                 case ChannelActivated _:
                     ChannelState = ChannelState.Active;
@@ -59,6 +77,7 @@ namespace DotPulsar.Internal.Abstractions
                 case ChannelDeactivated _:
                     ChannelState = ChannelState.Inactive;
                     break;
+                case SendReceiptWrongOrdering _:
                 case ChannelDisconnected _:
                     ChannelState = ChannelState.Disconnected;
                     break;
@@ -68,11 +87,55 @@ namespace DotPulsar.Internal.Abstractions
                 case ChannelUnsubscribed _:
                     ChannelState = ChannelState.Unsubscribed;
                     break;
+                case ProducerWaitingForExclusive _:
+                    ChannelState = ChannelState.WaitingForExclusive;
+                    break;
             }
 
             CalculateState();
         }
+    }
 
-        protected abstract void CalculateState();
+    protected abstract void CalculateState();
+
+    protected void ScheduleReconnect(IContainsChannel channel)
+    {
+        if (Interlocked.CompareExchange(ref _isReconnecting, 1, 0) != 0)
+            return;
+
+        ActionQueue.Enqueue(async cancellationToken =>
+        {
+            try
+            {
+                await channel.CloseChannel(cancellationToken).ConfigureAwait(false);
+                await channel.EstablishNewChannel(cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isReconnecting, 0);
+
+                lock (_stateLock)
+                {
+                    if (ChannelState is ChannelState.ClosedByServer or ChannelState.Disconnected)
+                        CalculateState();
+                }
+            }
+        });
+    }
+
+    private async Task ProcessActions(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var func = await ActionQueue.Dequeue(cancellationToken).ConfigureAwait(false);
+                await func.Invoke(cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
     }
 }

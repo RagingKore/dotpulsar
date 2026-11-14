@@ -31,28 +31,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - name: checkout
-        uses: actions/checkout@main
-
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v7
+      - name: Check ASF action allowlist
+        uses: apache/infrastructure-actions/allowlist-check@main
         with:
-          dotnet-version: '5.0.x'
+          scan-glob: '.github/**/*.y*ml'
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v6
+        id: setupstep
+        with:
+          dotnet-version: '9.0.x'
 
       - name: run unit tests
-        run: dotnet test ./tests/DotPulsar.Tests/DotPulsar.Tests.csproj --logger "trx;verbosity=detailed"
-
-      - name: package artifacts
-        if: failure()
         run: |
-          rm -rf artifacts
-          mkdir artifacts
-          find . -type d -name "TestResults" -exec cp --parents -R {} artifacts/ \;
-          zip -r artifacts.zip artifacts
-
-      - name: upload artifacts
-        uses: actions/upload-artifact@master
-        if: failure()
-        with:
-          name: artifacts
-          path: artifacts.zip
+          echo 'Dotnet Version: ${{ steps.setupstep.outputs.dotnet-version }}'
+          dotnet test ./tests/DotPulsar.Tests/DotPulsar.Tests.csproj --logger "trx;verbosity=detailed" --settings .runsettings

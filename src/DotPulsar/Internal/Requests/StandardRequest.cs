@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,59 +12,57 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Requests
+namespace DotPulsar.Internal.Requests;
+
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.PulsarApi;
+using System.Diagnostics.CodeAnalysis;
+
+public readonly struct StandardRequest : IRequest
 {
-    using DotPulsar.Internal.Abstractions;
-    using DotPulsar.Internal.PulsarApi;
-    using System;
-    using System.Diagnostics.CodeAnalysis;
+    private readonly ulong _requestId;
+    private readonly ulong? _consumerId;
+    private readonly ulong? _producerId;
+    private readonly BaseCommand.Types.Type? _commandType;
 
-    public struct StandardRequest : IRequest
+    private StandardRequest(ulong requestId, ulong? consumerId, ulong? producerId, BaseCommand.Types.Type? commandType)
     {
-        private readonly ulong _requestId;
-        private readonly ulong? _consumerId;
-        private readonly ulong? _producerId;
-        private readonly BaseCommand.Type? _commandType;
+        _requestId = requestId;
+        _consumerId = consumerId;
+        _producerId = producerId;
+        _commandType = commandType;
+    }
 
-        private StandardRequest(ulong requestId, ulong? consumerId, ulong? producerId, BaseCommand.Type? commandType)
-        {
-            _requestId = requestId;
-            _consumerId = consumerId;
-            _producerId = producerId;
-            _commandType = commandType;
-        }
+    public static StandardRequest WithRequestId(ulong requestId)
+        => new(requestId, null, null, null);
 
-        public static StandardRequest WithRequestId(ulong requestId)
-            => new(requestId, null, null, null);
+    public static StandardRequest WithConsumerId(ulong requestId, ulong consumerId, BaseCommand.Types.Type? commandType = null)
+        => new(requestId, consumerId, null, commandType);
 
-        public static StandardRequest WithConsumerId(ulong requestId, ulong consumerId, BaseCommand.Type? commandType = null)
-            => new(requestId, consumerId, null, commandType);
+    public static StandardRequest WithProducerId(ulong requestId, ulong producerId, BaseCommand.Types.Type? commandType = null)
+        => new(requestId, null, producerId, commandType);
 
-        public static StandardRequest WithProducerId(ulong requestId, ulong producerId, BaseCommand.Type? commandType = null)
-            => new (requestId, null, producerId, commandType);
+    public bool SenderIsConsumer(ulong consumerId)
+        => _consumerId.HasValue && _consumerId.Value == consumerId;
 
-        public bool SenderIsConsumer(ulong consumerId)
-            => _consumerId.HasValue && _consumerId.Value == consumerId;
+    public bool SenderIsProducer(ulong producerId)
+        => _producerId.HasValue && _producerId.Value == producerId;
 
-        public bool SenderIsProducer(ulong producerId)
-            => _producerId.HasValue && _producerId.Value == producerId;
-
-        public bool IsCommandType(BaseCommand.Type commandType)
-            => _commandType.HasValue && _commandType.Value == commandType;
+    public bool IsCommandType(BaseCommand.Types.Type commandType)
+        => _commandType.HasValue && _commandType.Value == commandType;
 
 #if NETSTANDARD2_0
-        public bool Equals(IRequest other)
+    public bool Equals(IRequest other)
 #else
-        public bool Equals([AllowNull] IRequest other)
+    public bool Equals([AllowNull] IRequest other)
 #endif
-        {
-            if (other is StandardRequest request)
-                return _requestId.Equals(request._requestId);
+    {
+        if (other is StandardRequest request)
+            return _requestId.Equals(request._requestId);
 
-            return false;
-        }
-
-        public override int GetHashCode()
-            => HashCode.Combine(_requestId);
+        return false;
     }
+
+    public override int GetHashCode()
+        => HashCode.Combine(_requestId);
 }

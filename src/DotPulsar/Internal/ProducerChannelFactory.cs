@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,74 +12,92 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.Extensions;
+using DotPulsar.Internal.PulsarApi;
+
+public sealed class ProducerChannelFactory : IProducerChannelFactory
 {
-    using Abstractions;
-    using DotPulsar.Internal.Extensions;
-    using PulsarApi;
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly Guid _correlationId;
+    private readonly IRegisterEvent _eventRegister;
+    private readonly IConnectionPool _connectionPool;
+    private readonly CommandProducer _commandProducer;
+    private readonly ICompressorFactory? _compressorFactory;
+    private readonly Schema? _schema;
+    private ulong? _topicEpoch;
 
-    public sealed class ProducerChannelFactory : IProducerChannelFactory
+    public ProducerChannelFactory(
+        Guid correlationId,
+        IRegisterEvent eventRegister,
+        IConnectionPool connectionPool,
+        string topic,
+        string? producerName,
+        ProducerAccessMode producerAccessMode,
+        SchemaInfo schemaInfo,
+        ICompressorFactory? compressorFactory,
+        Dictionary<string, string>? properties)
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private readonly IConnectionPool _connectionPool;
-        private readonly CommandProducer _commandProducer;
-        private readonly ICompressorFactory? _compressorFactory;
-        private readonly Schema? _schema;
+        _correlationId = correlationId;
+        _eventRegister = eventRegister;
+        _connectionPool = connectionPool;
+        _schema = schemaInfo.PulsarSchema;
 
-        public ProducerChannelFactory(
-            Guid correlationId,
-            IRegisterEvent eventRegister,
-            IConnectionPool connectionPool,
-            string topic,
-            string? producerName,
-            SchemaInfo schemaInfo,
-            ICompressorFactory? compressorFactory)
+        _commandProducer = new CommandProducer
         {
-            _correlationId = correlationId;
-            _eventRegister = eventRegister;
-            _connectionPool = connectionPool;
+            ProducerAccessMode = producerAccessMode,
+            Topic = topic
+        };
 
-            _commandProducer = new CommandProducer
-            {
-                ProducerName = producerName,
-                Topic = topic
-            };
+        if (producerName is not null)
+            _commandProducer.ProducerName = producerName;
 
-            _compressorFactory = compressorFactory;
-            _schema = schemaInfo.PulsarSchema;
-        }
+        if (_schema.Type != Schema.Types.Type.None)
+            _commandProducer.Schema = _schema;
 
-        public async Task<IProducerChannel> Create(CancellationToken cancellationToken)
+        if (properties is not null)
+            _commandProducer.Metadata.AddRange(properties.Select(x => new KeyValue { Key = x.Key, Value = x.Value }));
+
+        _compressorFactory = compressorFactory;
+    }
+
+    public async Task<IProducerChannel> Create(CancellationToken cancellationToken)
+    {
+        if (_topicEpoch.HasValue)
         {
-            var connection = await _connectionPool.FindConnectionForTopic(_commandProducer.Topic, cancellationToken).ConfigureAwait(false);
-            var channel = new Channel(_correlationId, _eventRegister, new AsyncQueue<MessagePackage>());
-            var response = await connection.Send(_commandProducer, channel, cancellationToken).ConfigureAwait(false);
-            var schemaVersion = await GetSchemaVersion(connection, cancellationToken).ConfigureAwait(false);
-            return new ProducerChannel(response.ProducerId, response.ProducerName, connection, _compressorFactory, schemaVersion);
+            if (_commandProducer.ProducerAccessMode != ProducerAccessMode.Shared)
+                _commandProducer.ProducerAccessMode = ProducerAccessMode.Exclusive;
+            _commandProducer.TopicEpoch = _topicEpoch.Value;
         }
+        else
+            _commandProducer.ClearTopicEpoch();
 
-        private async ValueTask<byte[]?> GetSchemaVersion(IConnection connection, CancellationToken cancellationToken)
+        var connection = await _connectionPool.FindConnectionForTopic(_commandProducer.Topic, cancellationToken).ConfigureAwait(false);
+        var channel = new Channel(_correlationId, _eventRegister, new AsyncQueue<MessagePackage>());
+        var response = await connection.Send(_commandProducer, channel, cancellationToken).ConfigureAwait(false);
+        _topicEpoch = response.TopicEpoch;
+        var schemaVersion = await GetSchemaVersion(connection, cancellationToken).ConfigureAwait(false);
+        return new ProducerChannel(response.ProducerId, response.ProducerName, connection, _compressorFactory, schemaVersion);
+    }
+
+    private async ValueTask<byte[]?> GetSchemaVersion(IConnection connection, CancellationToken cancellationToken)
+    {
+        if (_schema is null || _schema.Type == Schema.Types.Type.None)
+            return null;
+
+        var command = new CommandGetOrCreateSchema
         {
-            if (_schema is null || _schema.Type == Schema.SchemaType.None)
-                return null;
+            Schema = _schema,
+            Topic = _commandProducer.Topic
+        };
 
-            var command = new CommandGetOrCreateSchema
-            {
-                Schema = _schema,
-                Topic = _commandProducer.Topic
-            };
+        var response = await connection.Send(command, cancellationToken).ConfigureAwait(false);
 
-            var response = await connection.Send(command, cancellationToken).ConfigureAwait(false);
+        response.Expect(BaseCommand.Types.Type.GetOrCreateSchemaResponse);
+        if (response.GetOrCreateSchemaResponse.HasErrorCode)
+            response.GetOrCreateSchemaResponse.Throw();
 
-            response.Expect(BaseCommand.Type.GetOrCreateSchemaResponse);
-            if (response.GetOrCreateSchemaResponse.ShouldSerializeErrorCode())
-                response.GetOrCreateSchemaResponse.Throw();
-
-            return response.GetOrCreateSchemaResponse.SchemaVersion;
-        }
+        return response.GetOrCreateSchemaResponse.SchemaVersion.ToArray();
     }
 }

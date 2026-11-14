@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,99 +12,101 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.PulsarApi;
+using Google.Protobuf;
+using Microsoft.Extensions.ObjectPool;
+using System.Buffers;
+
+public sealed class ProducerChannel : IProducerChannel
 {
-    using Abstractions;
-    using Extensions;
-    using Microsoft.Extensions.ObjectPool;
-    using PulsarApi;
-    using System;
-    using System.Buffers;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly ObjectPool<SendPackage> _sendPackagePool;
+    private readonly ulong _id;
+    private readonly string _name;
+    private readonly IConnection _connection;
+    private readonly ICompressorFactory? _compressorFactory;
+    private readonly byte[]? _schemaVersion;
 
-    public sealed class ProducerChannel : IProducerChannel
+    public ProducerChannel(
+        ulong id,
+        string name,
+        IConnection connection,
+        ICompressorFactory? compressorFactory,
+        byte[]? schemaVersion)
     {
-        private readonly ObjectPool<SendPackage> _sendPackagePool;
-        private readonly ulong _id;
-        private readonly string _name;
-        private readonly IConnection _connection;
-        private readonly ICompressorFactory? _compressorFactory;
-        private readonly byte[]? _schemaVersion;
+        var sendPackagePolicy = new DefaultPooledObjectPolicy<SendPackage>();
+        _sendPackagePool = new DefaultObjectPool<SendPackage>(sendPackagePolicy);
+        _id = id;
+        _name = name;
+        _connection = connection;
+        _compressorFactory = compressorFactory;
+        _schemaVersion = schemaVersion;
+    }
 
-        public ProducerChannel(
-            ulong id,
-            string name,
-            IConnection connection,
-            ICompressorFactory? compressorFactory,
-            byte[]? schemaVersion)
+    public async ValueTask ClosedByClient(CancellationToken cancellationToken)
+    {
+        try
         {
-            var sendPackagePolicy = new DefaultPooledObjectPolicy<SendPackage>();
-            _sendPackagePool = new DefaultObjectPool<SendPackage>(sendPackagePolicy);
-            _id = id;
-            _name = name;
-            _connection = connection;
-            _compressorFactory = compressorFactory;
-            _schemaVersion = schemaVersion;
+            var closeProducer = new CommandCloseProducer { ProducerId = _id };
+            await _connection.Send(closeProducer, cancellationToken).ConfigureAwait(false);
         }
-
-        public async ValueTask ClosedByClient(CancellationToken cancellationToken)
+        catch
         {
-            try
-            {
-                var closeProducer = new CommandCloseProducer { ProducerId = _id };
-                await _connection.Send(closeProducer, cancellationToken).ConfigureAwait(false);
-            }
-            catch
-            {
-                // Ignore
-            }
+            // Ignore
         }
+    }
 
-        public ValueTask DisposeAsync() => new();
+    public ValueTask DisposeAsync() => new();
 
-        public async Task<CommandSendReceipt> Send(MessageMetadata metadata, ReadOnlySequence<byte> payload, CancellationToken cancellationToken)
+    public async Task Send(MessageMetadata metadata, ReadOnlySequence<byte> payload, TaskCompletionSource<BaseCommand> responseTcs, CancellationToken cancellationToken)
+    {
+        var sendPackage = _sendPackagePool.Get();
+        var resetSchema = false;
+        var resetCompression = false;
+
+        try
         {
-            var sendPackage = _sendPackagePool.Get();
+            metadata.PublishTime = (ulong) DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            metadata.ProducerName = _name;
 
-            try
+            if (metadata.SchemaVersion is null && _schemaVersion is not null)
             {
-                metadata.PublishTime = (ulong) DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                metadata.ProducerName = _name;
-
-                if (metadata.SchemaVersion is null && _schemaVersion is not null)
-                    metadata.SchemaVersion = _schemaVersion;
-
-                if (sendPackage.Command is null)
-                {
-                    sendPackage.Command = new CommandSend
-                    {
-                        ProducerId = _id,
-                        NumMessages = 1
-                    };
-                }
-
-                sendPackage.Command.SequenceId = metadata.SequenceId;
-                sendPackage.Metadata = metadata;
-
-                if (_compressorFactory is null)
-                    sendPackage.Payload = payload;
-                else
-                {
-                    sendPackage.Metadata.Compression = _compressorFactory.CompressionType;
-                    sendPackage.Metadata.UncompressedSize = (uint) payload.Length;
-                    using var compressor = _compressorFactory.Create();
-                    sendPackage.Payload = compressor.Compress(payload);
-                }
-
-                var response = await _connection.Send(sendPackage, cancellationToken).ConfigureAwait(false);
-                response.Expect(BaseCommand.Type.SendReceipt);
-                return response.SendReceipt;
+                metadata.SchemaVersion = ByteString.CopyFrom(_schemaVersion);
+                resetSchema = true;
             }
-            finally
+
+            sendPackage.Command ??= new CommandSend { ProducerId = _id, NumMessages = 1 };
+
+            sendPackage.Command.SequenceId = metadata.SequenceId;
+            sendPackage.Metadata = metadata;
+
+            if (_compressorFactory is null || metadata.Compression != CompressionType.None)
+                sendPackage.Payload = payload;
+            else
             {
-                _sendPackagePool.Return(sendPackage);
+                sendPackage.Metadata.Compression = _compressorFactory.CompressionType;
+                sendPackage.Metadata.UncompressedSize = (uint) payload.Length;
+                using var compressor = _compressorFactory.Create();
+                sendPackage.Payload = compressor.Compress(payload);
+                resetCompression = true;
             }
+
+            await _connection.Send(sendPackage, responseTcs, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (resetSchema)
+                metadata.SchemaVersion = null;
+
+            if (resetCompression)
+            {
+                metadata.Compression = CompressionType.None;
+                metadata.UncompressedSize = 0;
+            }
+
+            _sendPackagePool.Return(sendPackage);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,24 +12,31 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
+namespace DotPulsar.Internal.Abstractions;
+
+public interface IExecute
 {
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+    ValueTask Execute(Action action, CancellationToken cancellationToken = default);
 
-    public interface IExecute
-    {
-        ValueTask Execute(Action action, CancellationToken cancellationToken = default);
+    ValueTask Execute(Func<Task> func, CancellationToken cancellationToken = default);
 
-        ValueTask Execute(Func<Task> func, CancellationToken cancellationToken = default);
+    ValueTask Execute(Func<ValueTask> func, CancellationToken cancellationToken = default);
 
-        ValueTask Execute(Func<ValueTask> func, CancellationToken cancellationToken = default);
+    ValueTask<TResult> Execute<TResult>(Func<TResult> func, CancellationToken cancellationToken = default);
 
-        ValueTask<TResult> Execute<TResult>(Func<TResult> func, CancellationToken cancellationToken = default);
+    ValueTask<TResult> Execute<TResult>(Func<Task<TResult>> func, CancellationToken cancellationToken = default);
 
-        ValueTask<TResult> Execute<TResult>(Func<Task<TResult>> func, CancellationToken cancellationToken = default);
+    ValueTask<TResult> Execute<TResult>(Func<ValueTask<TResult>> func, CancellationToken cancellationToken = default);
 
-        ValueTask<TResult> Execute<TResult>(Func<ValueTask<TResult>> func, CancellationToken cancellationToken = default);
-    }
+    ValueTask<bool> TryExecuteOnce(Action action, CancellationToken cancellationToken = default);
+
+    ValueTask<bool> TryExecuteOnce(Func<Task> func, CancellationToken cancellationToken = default);
+
+    ValueTask<bool> TryExecuteOnce(Func<ValueTask> func, CancellationToken cancellationToken = default);
+
+    ValueTask<ExecutionResult<TResult>> TryExecuteOnce<TResult>(Func<TResult> func, CancellationToken cancellationToken = default);
+
+    ValueTask<ExecutionResult<TResult>> TryExecuteOnce<TResult>(Func<Task<TResult>> func, CancellationToken cancellationToken = default);
+
+    ValueTask<ExecutionResult<TResult>> TryExecuteOnce<TResult>(Func<ValueTask<TResult>> func, CancellationToken cancellationToken = default);
 }

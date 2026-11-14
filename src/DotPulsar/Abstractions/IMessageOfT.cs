@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,16 +12,15 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Abstractions;
+
+/// <summary>
+/// A generic message abstraction.
+/// </summary>
+public interface IMessage<TValue> : IMessage
 {
     /// <summary>
-    /// A generic message abstraction.
+    /// The value of the message.
     /// </summary>
-    public interface IMessage<TValue> : IMessage
-    {
-        /// <summary>
-        /// The value of the message.
-        /// </summary>
-        public TValue Value();
-    }
+    TValue Value();
 }

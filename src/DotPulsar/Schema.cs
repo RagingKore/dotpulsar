@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,89 +12,118 @@
  * limitations under the License.
  */
 
-namespace DotPulsar
+namespace DotPulsar;
+
+using DotPulsar.Schemas;
+
+/// <summary>
+/// Message schema definitions.
+/// </summary>
+public static class Schema
 {
-    using DotPulsar.Schemas;
+    static Schema()
+    {
+        ByteSequence = new ByteSequenceSchema();
+        ByteArray = new ByteArraySchema();
+        String = StringSchema.UTF8;
+        Boolean = new BooleanSchema();
+        Int8 = new ByteSchema();
+        Int16 = new ShortSchema();
+        Int32 = new IntegerSchema();
+        Int64 = new LongSchema();
+        Float = new FloatSchema();
+        TimeStamp = TimestampSchema.Timestamp;
+        Date = TimestampSchema.Date;
+        Time = new TimeSchema();
+    }
 
     /// <summary>
-    /// Message schema definitions.
+    /// Raw bytes schema using ReadOnlySequence of bytes.
     /// </summary>
-    public static class Schema
-    {
-        static Schema()
-        {
-            ByteSequence = new ByteSequenceSchema();
-            ByteArray = new ByteArraySchema();
-            String = StringSchema.UTF8;
-            Boolean = new BooleanSchema();
-            Int8 = new ByteSchema();
-            Int16 = new ShortSchema();
-            Int32 = new IntegerSchema();
-            Int64 = new LongSchema();
-            Float = new FloatSchema();
-            TimeStamp = TimestampSchema.Timestamp;
-            Date = TimestampSchema.Date;
-            Time = new TimeSchema();
-        }
+    public static ByteSequenceSchema ByteSequence { get; }
 
-        /// <summary>
-        /// Raw bytes schema using ReadOnlySequence of bytes.
-        /// </summary>
-        public static ByteSequenceSchema ByteSequence { get; }
+    /// <summary>
+    /// Raw bytes schema using byte[].
+    /// </summary>
+    public static ByteArraySchema ByteArray { get; }
 
-        /// <summary>
-        /// Raw bytes schema using byte[].
-        /// </summary>
-        public static ByteArraySchema ByteArray { get; }
+    /// <summary>
+    /// UTF-8 schema.
+    /// </summary>
+    public static StringSchema String { get; }
 
-        /// <summary>
-        /// UTF-8 schema.
-        /// </summary>
-        public static StringSchema String { get; }
+    /// <summary>
+    /// Boolean schema.
+    /// </summary>
+    public static BooleanSchema Boolean { get; }
 
-        /// <summary>
-        /// Boolean schema.
-        /// </summary>
-        public static BooleanSchema Boolean { get; }
+    /// <summary>
+    /// Byte schema.
+    /// </summary>
+    public static ByteSchema Int8 { get; }
 
-        /// <summary>
-        /// Byte schema.
-        /// </summary>
-        public static ByteSchema Int8 { get; }
+    /// <summary>
+    /// Short schema.
+    /// </summary>
+    public static ShortSchema Int16 { get; }
 
-        /// <summary>
-        /// Short schema.
-        /// </summary>
-        public static ShortSchema Int16 { get; }
+    /// <summary>
+    /// Integer schema.
+    /// </summary>
+    public static IntegerSchema Int32 { get; }
 
-        /// <summary>
-        /// Integer schema.
-        /// </summary>
-        public static IntegerSchema Int32 { get; }
+    /// <summary>
+    /// Long schema.
+    /// </summary>
+    public static LongSchema Int64 { get; }
 
-        /// <summary>
-        /// Long schema.
-        /// </summary>
-        public static LongSchema Int64 { get; }
+    /// <summary>
+    /// Float schema.
+    /// </summary>
+    public static FloatSchema Float { get; }
 
-        /// <summary>
-        /// Float schema.
-        /// </summary>
-        public static FloatSchema Float { get; }
+    /// <summary>
+    /// Timestamp schema using DateTime.
+    /// </summary>
+    public static TimestampSchema TimeStamp { get; }
 
-        /// <summary>
-        /// Timestamp schema using DateTime.
-        /// </summary>
-        public static TimestampSchema TimeStamp { get; }
+    /// <summary>
+    /// Date schema using DateTime.
+    /// </summary>
+    public static TimestampSchema Date { get; }
 
-        /// <summary>
-        /// Date schema using DateTime.
-        /// </summary>
-        public static TimestampSchema Date { get; }
+    /// <summary>
+    /// Time schema using TimeSpan.
+    /// </summary>
+    public static TimeSchema Time { get; }
 
-        /// <summary>
-        /// Time schema using TimeSpan.
-        /// </summary>
-        public static TimeSchema Time { get; }
-    }
+    /// <summary>
+    /// JSON schema using System.Text.Json
+    /// </summary>
+    public static JsonSchema<T> Json<T>() => new();
+
+    /// <summary>
+    /// JSON schema using System.Text.Json with custom serializer options
+    /// </summary>
+    public static JsonSchema<T> Json<T>(System.Text.Json.JsonSerializerOptions options) => new(options);
+
+    /// <summary>
+    /// JSON schema using System.Text.Json with custom serializer options and schema definition
+    /// </summary>
+    public static JsonSchema<T> Json<T>(System.Text.Json.JsonSerializerOptions options, string jsonSchemaDefinition) => new(options, jsonSchemaDefinition);
+
+    /// <summary>
+    /// Protobuf native schema for classes that implement Google.Protobuf.IMessage
+    /// </summary>
+    public static ProtobufSchema<T> Protobuf<T>() where T : Google.Protobuf.IMessage<T>, new() => new();
+
+    /// <summary>
+    /// Avro schema for classes that use ISpecificRecord
+    /// </summary>
+    public static AvroISpecificRecordSchema<T> AvroISpecificRecord<T>() => new();
+
+    /// <summary>
+    /// Avro schema for generic avro record, always give Avro.Generic.GenericRecord
+    /// </summary>
+    public static AvroGenericRecordSchema<T> AvroGenericRecord<T>(string jsonAvroSchema) => new(jsonAvroSchema);
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Exceptions
+namespace DotPulsar.Exceptions;
+
+/// <summary>
+/// Ack with transaction conflict
+/// </summary>
+public sealed class TransactionConflictException : DotPulsarException
 {
-    using System;
+    public TransactionConflictException(string message) : base(message) { }
 
-    public sealed class TransactionConflictException : DotPulsarException
-    {
-        public TransactionConflictException(string message) : base(message) { }
-
-        public TransactionConflictException(string message, Exception innerException) : base(message, innerException) { }
-    }
+    public TransactionConflictException(string message, Exception innerException) : base(message, innerException) { }
 }

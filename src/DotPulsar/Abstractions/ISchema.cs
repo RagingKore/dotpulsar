@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,28 +12,27 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Abstractions;
+
+using System.Buffers;
+
+/// <summary>
+/// A schema abstraction.
+/// </summary>
+public interface ISchema<T>
 {
-    using System.Buffers;
+    /// <summary>
+    /// Decode the raw bytes.
+    /// </summary>
+    T Decode(ReadOnlySequence<byte> bytes, byte[]? schemaVersion = null);
 
     /// <summary>
-    /// A schema abstraction.
+    /// Encode the message.
     /// </summary>
-    public interface ISchema<T>
-    {
-        /// <summary>
-        /// Decode the raw bytes.
-        /// </summary>
-        public T Decode(ReadOnlySequence<byte> bytes, byte[]? schemaVersion = null);
+    ReadOnlySequence<byte> Encode(T message);
 
-        /// <summary>
-        /// Encode the message.
-        /// </summary>
-        public ReadOnlySequence<byte> Encode(T message);
-
-        /// <summary>
-        /// The schema info.
-        /// </summary>
-        public SchemaInfo SchemaInfo { get; }
-    }
+    /// <summary>
+    /// The schema info.
+    /// </summary>
+    SchemaInfo SchemaInfo { get; }
 }

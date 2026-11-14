@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,72 +12,75 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Extensions;
+using DotPulsar.Internal.Extensions;
+using System.Diagnostics;
+
+public static class DotPulsarActivitySource
 {
-    using DotPulsar.Abstractions;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-
-    public static class DotPulsarActivitySource
+    static DotPulsarActivitySource()
     {
-        private const string _traceParent = "traceparent";
-        private const string _traceState = "tracestate";
+        ActivitySource = new(Constants.ClientName, Constants.ClientVersion);
+    }
 
-        static DotPulsarActivitySource()
+    public static ActivitySource ActivitySource { get; }
+
+    public static Activity? StartConsumerActivity(IMessage message, string operationName, KeyValuePair<string, object?>[] tags, bool linkTraces)
+    {
+        if (!ActivitySource.HasListeners())
+            return null;
+
+        IEnumerable<ActivityLink>? activityLinks = null;
+
+        if (linkTraces)
         {
-            ActivitySource = new ActivitySource(Constants.ClientName, Constants.ClientVersion);
+            var activityLink = GetActivityLink(message);
+            if (activityLink is not null)
+                activityLinks = [activityLink.Value];
         }
 
-        public static ActivitySource ActivitySource { get; }
+        return StartActivity(operationName, ActivityKind.Consumer, tags, activityLinks, message.GetConversationId());
+    }
 
-        public static Activity? StartConsumerActivity(IMessage message, string operationName, KeyValuePair<string, object?>[] tags)
+    public static Activity? StartProducerActivity(MessageMetadata metadata, string operationName, KeyValuePair<string, object?>[] tags)
+    {
+        if (!ActivitySource.HasListeners())
+            return null;
+
+        return StartActivity(operationName, ActivityKind.Producer, tags, null, metadata.GetConversationId());
+    }
+
+    private static ActivityLink? GetActivityLink(IMessage message)
+    {
+        if (message.Properties.TryGetValue(Constants.TraceParent, out var traceParent))
         {
-            if (!ActivitySource.HasListeners())
-                return null;
+            _ = message.Properties.TryGetValue(Constants.TraceState, out var traceState);
 
-            var properties = message.Properties;
-
-            if (properties.TryGetValue(_traceParent, out var traceparent))
-            {
-                var tracestate = properties.ContainsKey(_traceState) ? properties[_traceState] : null;
-                if (ActivityContext.TryParse(traceparent, tracestate, out var activityContext))
-                    return ActivitySource.StartActivity(operationName, ActivityKind.Consumer, activityContext, tags);
-            }
-
-            var activity = ActivitySource.StartActivity(operationName, ActivityKind.Consumer);
-
-            if (activity is not null && activity.IsAllDataRequested)
-            {
-                for (var i = 0; i < tags.Length; ++i)
-                {
-                    var tag = tags[i];
-                    activity.SetTag(tag.Key, tag.Value);
-                }
-            }
-
-            return activity;
+            if (ActivityContext.TryParse(traceParent, traceState, out var context))
+                return new ActivityLink(context);
         }
 
-        public static Activity? StartProducerActivity(MessageMetadata metadata, string operationName, KeyValuePair<string, object?>[] tags)
+        return null;
+    }
+
+    private static Activity? StartActivity(
+        string operationName,
+        ActivityKind kind,
+        KeyValuePair<string, object?>[] tags,
+        IEnumerable<ActivityLink>? activityLinks,
+        string? conversationId)
+    {
+        var activity = ActivitySource.StartActivity(kind, name: operationName, tags: tags, links: activityLinks);
+
+        if (activity is not null && activity.IsAllDataRequested)
         {
-            if (!ActivitySource.HasListeners())
-                return null;
-
-            var activity = ActivitySource.StartActivity(operationName, ActivityKind.Producer);
-
-            if (activity is not null && activity.IsAllDataRequested)
-            {
-                metadata[_traceParent] = activity.TraceId.ToHexString();
-                metadata[_traceState] = activity.TraceStateString;
-
-                for (var i = 0; i < tags.Length; ++i)
-                {
-                    var tag = tags[i];
-                    activity.SetTag(tag.Key, tag.Value);
-                }
-            }
-
-            return activity;
+            if (conversationId is not null)
+                activity.SetConversationId(conversationId);
         }
+
+        return activity;
     }
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,15 +12,13 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Exceptions
+namespace DotPulsar.Internal.Exceptions;
+
+using DotPulsar.Exceptions;
+
+public sealed class UnexpectedResponseException : DotPulsarException
 {
-    using DotPulsar.Exceptions;
-    using System;
+    public UnexpectedResponseException(string message) : base(message) { }
 
-    public sealed class UnexpectedResponseException : DotPulsarException
-    {
-        public UnexpectedResponseException(string message) : base(message) { }
-
-        public UnexpectedResponseException(string message, Exception innerException) : base(message, innerException) { }
-    }
+    public UnexpectedResponseException(string message, Exception innerException) : base(message, innerException) { }
 }

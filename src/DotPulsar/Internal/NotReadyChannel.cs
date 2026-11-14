@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,47 +12,43 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Exceptions;
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.PulsarApi;
+using System.Buffers;
+
+public sealed class NotReadyChannel<TMessage> : IConsumerChannel<TMessage>, IProducerChannel
 {
-    using Abstractions;
-    using DotPulsar.Abstractions;
-    using Exceptions;
-    using PulsarApi;
-    using System;
-    using System.Buffers;
-    using System.Threading;
-    using System.Threading.Tasks;
+    public ValueTask DisposeAsync()
+        => new();
 
-    public sealed class NotReadyChannel<TMessage> : IConsumerChannel<TMessage>, IProducerChannel
-    {
-        public ValueTask DisposeAsync()
-            => new();
+    public ValueTask ClosedByClient(CancellationToken cancellationToken)
+        => new();
 
-        public ValueTask ClosedByClient(CancellationToken cancellationToken)
-            => new();
+    public ValueTask<IMessage<TMessage>> Receive(CancellationToken cancellationToken = default)
+        => throw GetException();
 
-        public ValueTask<IMessage<TMessage>> Receive(CancellationToken cancellationToken = default)
-            => throw GetException();
+    public Task Send(MessageMetadata metadata, ReadOnlySequence<byte> payload, TaskCompletionSource<BaseCommand> responseTcs, CancellationToken cancellationToken)
+        => throw GetException();
 
-        public Task<CommandSendReceipt> Send(MessageMetadata metadata, ReadOnlySequence<byte> payload, CancellationToken cancellationToken)
-            => throw GetException();
+    public Task Send(CommandAck command, CancellationToken cancellationToken)
+        => throw GetException();
 
-        public Task Send(CommandAck command, CancellationToken cancellationToken)
-            => throw GetException();
+    public Task Send(CommandRedeliverUnacknowledgedMessages command, CancellationToken cancellationToken)
+        => throw GetException();
 
-        public Task Send(CommandRedeliverUnacknowledgedMessages command, CancellationToken cancellationToken)
-            => throw GetException();
+    public Task Send(CommandUnsubscribe command, CancellationToken cancellationToken)
+        => throw GetException();
 
-        public Task Send(CommandUnsubscribe command, CancellationToken cancellationToken)
-            => throw GetException();
+    public Task Send(CommandSeek command, CancellationToken cancellationToken)
+        => throw GetException();
 
-        public Task Send(CommandSeek command, CancellationToken cancellationToken)
-            => throw GetException();
+    public Task<MessageId> Send(CommandGetLastMessageId command, CancellationToken cancellationToken)
+        => throw GetException();
 
-        public Task<MessageId> Send(CommandGetLastMessageId command, CancellationToken cancellationToken)
-            => throw GetException();
-
-        private static Exception GetException()
-            => new ChannelNotReadyException();
-    }
+    private static Exception GetException()
+        => new ChannelNotReadyException();
 }

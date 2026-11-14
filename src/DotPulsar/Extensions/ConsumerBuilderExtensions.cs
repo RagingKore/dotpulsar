@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,41 +12,60 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Extensions
+namespace DotPulsar.Extensions;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Internal;
+
+/// <summary>
+/// Extensions for IConsumerBuilder.
+/// </summary>
+public static class ConsumerBuilderExtensions
 {
-    using DotPulsar.Abstractions;
-    using DotPulsar.Internal;
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+    /// <summary>
+    /// Register a state changed handler.
+    /// </summary>
+    public static IConsumerBuilder<TMessage> StateChangedHandler<TMessage>(
+        this IConsumerBuilder<TMessage> builder,
+        Action<ConsumerStateChanged> handler)
+    {
+        void forwarder(ConsumerStateChanged consumerStateChanged, CancellationToken _) => handler(consumerStateChanged);
+        builder.StateChangedHandler(new ActionStateChangedHandler<ConsumerStateChanged>(forwarder, default));
+        return builder;
+    }
 
     /// <summary>
-    /// Extensions for IConsumerBuilder.
+    /// Register a state changed handler.
     /// </summary>
-    public static class ConsumerBuilderExtensions
+    public static IConsumerBuilder<TMessage> StateChangedHandler<TMessage>(
+        this IConsumerBuilder<TMessage> builder,
+        Action<ConsumerStateChanged, CancellationToken> handler,
+        CancellationToken cancellationToken = default)
     {
-        /// <summary>
-        /// Register a state changed handler.
-        /// </summary>
-        public static IConsumerBuilder<TMessage> StateChangedHandler<TMessage>(
-            this IConsumerBuilder<TMessage> builder,
-            Action<ConsumerStateChanged, CancellationToken> handler,
-            CancellationToken cancellationToken = default)
-        {
-            builder.StateChangedHandler(new ActionStateChangedHandler<ConsumerStateChanged>(handler, cancellationToken));
-            return builder;
-        }
+        builder.StateChangedHandler(new ActionStateChangedHandler<ConsumerStateChanged>(handler, cancellationToken));
+        return builder;
+    }
 
-        /// <summary>
-        /// Register a state changed handler.
-        /// </summary>
-        public static IConsumerBuilder<TMessage> StateChangedHandler<TMessage>(
-            this IConsumerBuilder<TMessage> builder,
-            Func<ConsumerStateChanged, CancellationToken, ValueTask> handler,
-            CancellationToken cancellationToken = default)
-        {
-            builder.StateChangedHandler(new FuncStateChangedHandler<ConsumerStateChanged>(handler, cancellationToken));
-            return builder;
-        }
+    /// <summary>
+    /// Register a state changed handler.
+    /// </summary>
+    public static IConsumerBuilder<TMessage> StateChangedHandler<TMessage>(
+        this IConsumerBuilder<TMessage> builder,
+        Func<ConsumerStateChanged, CancellationToken, ValueTask> handler,
+        CancellationToken cancellationToken = default)
+    {
+        builder.StateChangedHandler(new FuncStateChangedHandler<ConsumerStateChanged>(handler, cancellationToken));
+        return builder;
+    }
+
+    /// <summary>
+    /// Set the topics for this consumer. This, or setting a single topic, is required.
+    /// </summary>
+    public static IConsumerBuilder<TMessage> Topics<TMessage>(
+        this IConsumerBuilder<TMessage> builder,
+        params string[] topics)
+    {
+        builder.Topics(topics);
+        return builder;
     }
 }

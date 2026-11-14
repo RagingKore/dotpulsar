@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Exceptions
+namespace DotPulsar.Exceptions;
+
+/// <summary>
+/// Non valid authentication
+/// </summary>
+public sealed class AuthenticationException : DotPulsarException
 {
-    using System;
+    public AuthenticationException(string message) : base(message) { }
 
-    public sealed class AuthenticationException : DotPulsarException
-    {
-        public AuthenticationException(string message) : base(message) { }
-
-        public AuthenticationException(string message, Exception innerException) : base(message, innerException) { }
-    }
+    public AuthenticationException(string message, Exception innerException) : base(message, innerException) { }
 }

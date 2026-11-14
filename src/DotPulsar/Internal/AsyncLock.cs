@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,122 +12,132 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Internal.Exceptions;
+
+public sealed class AsyncLock : IAsyncDisposable
 {
-    using Exceptions;
-    using System;
-    using System.Collections.Generic;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly LinkedList<CancelableCompletionSource<IDisposable>> _pending;
+    private readonly SemaphoreSlim _semaphoreSlim;
+    private readonly Releaser _releaser;
+    private readonly Task<IDisposable> _completedTask;
+    private int _isDisposed;
 
-    public sealed class AsyncLock : IAsyncDisposable
+    public AsyncLock()
     {
-        private readonly LinkedList<CancelableCompletionSource<IDisposable>> _pending;
-        private readonly SemaphoreSlim _semaphoreSlim;
-        private readonly Releaser _releaser;
-        private readonly Task<IDisposable> _completedTask;
-        private int _isDisposed;
+        _pending = new LinkedList<CancelableCompletionSource<IDisposable>>();
+        _semaphoreSlim = new SemaphoreSlim(1, 1);
+        _releaser = new Releaser(Release);
+        _completedTask = Task.FromResult((IDisposable) _releaser);
+    }
 
-        public AsyncLock()
+    public Task<IDisposable> Lock(CancellationToken cancellationToken)
+    {
+        LinkedListNode<CancelableCompletionSource<IDisposable>>? node = null;
+
+        lock (_pending)
         {
-            _pending = new LinkedList<CancelableCompletionSource<IDisposable>>();
-            _semaphoreSlim = new SemaphoreSlim(1, 1);
-            _releaser = new Releaser(Release);
-            _completedTask = Task.FromResult((IDisposable) _releaser);
-        }
+            ThrowIfDisposed();
 
-        public Task<IDisposable> Lock(CancellationToken cancellationToken)
-        {
-            LinkedListNode<CancelableCompletionSource<IDisposable>>? node = null;
-
-            lock (_pending)
+            if (_semaphoreSlim.CurrentCount == 1) //Lock is free
             {
-                ThrowIfDisposed();
-
-                if (_semaphoreSlim.CurrentCount == 1) //Lock is free
-                {
-                    _semaphoreSlim.Wait(cancellationToken); //Will never block
-                    return _completedTask;
-                }
-
-                //Lock was not free
-                var ccs = new CancelableCompletionSource<IDisposable>();
-                node = _pending.AddLast(ccs);
+                _semaphoreSlim.Wait(cancellationToken); //Will never block
+                return _completedTask;
             }
 
-            cancellationToken.Register(() => Cancel(node));
-
-            return node.Value.Task;
+            //Lock was not free
+            var ccs = new CancelableCompletionSource<IDisposable>();
+            node = _pending.AddLast(ccs);
         }
 
-        public async ValueTask DisposeAsync()
+        node.Value.SetupCancellation(() => Cancel(node), cancellationToken);
+
+        return node.Value.Task;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            return;
+
+        IEnumerable<CancelableCompletionSource<IDisposable>> pending;
+
+        lock (_pending)
         {
-            lock (_pending)
+            pending = _pending.ToArray();
+            _pending.Clear();
+        }
+
+        foreach (var ccs in pending)
+        {
+            ccs.Dispose();
+        }
+
+        await _semaphoreSlim.WaitAsync().ConfigureAwait(false); //Wait for possible lock-holder to finish
+
+        _semaphoreSlim.Release();
+        _semaphoreSlim.Dispose();
+    }
+
+    private void Cancel(LinkedListNode<CancelableCompletionSource<IDisposable>> node)
+    {
+        lock (_pending)
+        {
+            try
             {
-                if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
-                    return;
-
-                foreach (var pending in _pending)
-                    pending.Dispose();
-
-                _pending.Clear();
+                _pending.Remove(node);
             }
-
-            await _semaphoreSlim.WaitAsync().ConfigureAwait(false); //Wait for possible lock-holder to finish
-
-            _semaphoreSlim.Release();
-            _semaphoreSlim.Dispose();
-        }
-
-        private void Cancel(LinkedListNode<CancelableCompletionSource<IDisposable>> node)
-        {
-            lock (_pending)
+            catch
             {
-                try
-                {
-                    _pending.Remove(node);
-                    node.Value.Dispose();
-                }
-                catch
-                {
-                    // Ignore
-                }
+                // Ignore
             }
         }
 
-        private void Release()
+        try
         {
-            lock (_pending)
-            {
-                var node = _pending.First;
-                if (node is not null)
-                {
-                    node.Value.SetResult(_releaser);
-                    node.Value.Dispose();
-                    _pending.RemoveFirst();
-                    return;
-                }
+            node.Value.Dispose();
+        }
+        catch
+        {
+            // Ignore
+        }
+    }
 
-                if (_semaphoreSlim.CurrentCount == 0)
-                    _semaphoreSlim.Release();
-            }
+    private void Release()
+    {
+        LinkedListNode<CancelableCompletionSource<IDisposable>>? node;
+
+        lock (_pending)
+        {
+            node = _pending.First;
+            if (node is not null)
+                _pending.RemoveFirst();
+            else if (_semaphoreSlim.CurrentCount == 0)
+                _semaphoreSlim.Release();
         }
 
-        private void ThrowIfDisposed()
+        if (node is not null)
         {
-            if (_isDisposed != 0)
-                throw new AsyncLockDisposedException();
+            node.Value.SetResult(_releaser);
+            node.Value.Dispose();
         }
+    }
 
-        private class Releaser : IDisposable
-        {
-            private readonly Action _release;
+    private void ThrowIfDisposed()
+    {
+        if (_isDisposed != 0)
+            throw new AsyncLockDisposedException();
+    }
 
-            public Releaser(Action release)
-                => _release = release;
+    private class Releaser : IDisposable
+    {
+        private readonly Action _release;
 
-            public void Dispose()
-                => _release();
-        }
+        public Releaser(Action release)
+            => _release = release;
+
+        public void Dispose()
+            => _release();
     }
 }

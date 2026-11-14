@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,45 +12,42 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Extensions
+namespace DotPulsar.Internal.Extensions;
+
+using System.Diagnostics;
+
+public static class ActivityExtensions
 {
-    using System;
-    using System.Diagnostics;
+    private const string ExceptionEventName = "exception";
+    private const string ExceptionStackTrace = "exception.stacktrace";
+    private const string ExceptionType = "exception.type";
+    private const string ExceptionMessage = "exception.message";
+    private const string MessageId = "messaging.message_id";
+    private const string PayloadSize = "messaging.message_payload_size_bytes";
 
-    public static class ActivityExtensions
+    public static void AddException(this Activity activity, Exception exception)
     {
-        private const string _exceptionEventName = "exception";
-        private const string _exceptionStackTrace = "exception.stacktrace";
-        private const string _exceptionType = "exception.type";
-        private const string _exceptionMessage = "exception.message";
-        private const string _messageId = "messaging.message_id";
-        private const string _payloadSize = "messaging.message_payload_size_bytes";
-        private const string _statusCode = "otel.status_code";
+        activity.SetStatus(ActivityStatusCode.Error);
 
-        public static void AddException(this Activity activity, Exception exception)
+        var exceptionTags = new ActivityTagsCollection
         {
-            activity.SetStatusCode("ERROR");
+            { ExceptionType, exception.GetType().FullName },
+            { ExceptionStackTrace, exception.ToString() }
+        };
 
-            var exceptionTags = new ActivityTagsCollection
-            {
-                { _exceptionType, exception.GetType().FullName },
-                { _exceptionStackTrace, exception.ToString() }
-            };
+        if (!string.IsNullOrWhiteSpace(exception.Message))
+            exceptionTags.Add(ExceptionMessage, exception.Message);
 
-            if (!string.IsNullOrWhiteSpace(exception.Message))
-                exceptionTags.Add(_exceptionMessage, exception.Message);
-
-            var activityEvent = new ActivityEvent(_exceptionEventName, default, exceptionTags);
-            activity.AddEvent(activityEvent);
-        }
-
-        public static void SetMessageId(this Activity activity, MessageId messageId)
-            => activity.SetTag(_messageId, messageId.ToString());
-
-        public static void SetStatusCode(this Activity activity, string statusCode)
-            => activity.SetTag(_statusCode, statusCode);
-
-        public static void SetPayloadSize(this Activity activity, long payloadSize)
-            => activity.SetTag(_payloadSize, payloadSize);
+        var activityEvent = new ActivityEvent(ExceptionEventName, default, exceptionTags);
+        activity.AddEvent(activityEvent);
     }
+
+    public static void SetMessageId(this Activity activity, MessageId messageId)
+        => activity.SetTag(MessageId, messageId.ToString());
+
+    public static void SetConversationId(this Activity activity, string conversationId)
+        => activity.SetTag(Constants.ConversationId, conversationId);
+
+    public static void SetPayloadSize(this Activity activity, long payloadSize)
+        => activity.SetTag(PayloadSize, payloadSize);
 }

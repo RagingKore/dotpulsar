@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,20 +12,18 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
-{
-    using System;
+namespace DotPulsar.Internal.Abstractions;
 
-    public interface IChannel
-    {
-        void Received(MessagePackage message);
-        void Activated();
-        void ClosedByServer();
-        void Connected();
-        void Deactivated();
-        void Disconnected();
-        void ReachedEndOfTopic();
-        void Unsubscribed();
-        IDisposable SenderLock();
-    }
+public interface IChannel
+{
+    void Received(MessagePackage message);
+    void Activated();
+    void ClosedByServer();
+    void WaitingForExclusive();
+    void Connected();
+    void Deactivated();
+    void Disconnected();
+    void ReachedEndOfTopic();
+    void Unsubscribed();
+    IDisposable SenderLock();
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,18 +12,15 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
-{
-    using System.Threading.Tasks;
+namespace DotPulsar.Abstractions;
 
+/// <summary>
+/// An exception handling abstraction.
+/// </summary>
+public interface IHandleException
+{
     /// <summary>
-    /// An exception handling abstraction.
+    /// Called after an action has thrown an Exception.
     /// </summary>
-    public interface IHandleException
-    {
-        /// <summary>
-        /// Called after an action has thrown an Exception.
-        /// </summary>
-        ValueTask OnException(ExceptionContext exceptionContext);
-    }
+    ValueTask OnException(ExceptionContext exceptionContext);
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,22 +12,19 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+public sealed class SequenceId
 {
-    using System.Threading;
+    private long _current;
 
-    public sealed class SequenceId
+    public SequenceId(ulong initialSequenceId)
     {
-        private long _current;
-
-        public SequenceId(ulong initialSequenceId)
-        {
-            // Subtracting one because Interlocked.Increment will return the post-incremented value
-            // which is expected to be the initialSequenceId for the first call
-            _current = unchecked((long) initialSequenceId - 1);
-        }
-
-        public ulong FetchNext()
-            => unchecked((ulong) Interlocked.Increment(ref _current));
+        // Subtracting one because Interlocked.Increment will return the post-incremented value
+        // which is expected to be the initialSequenceId for the first call
+        _current = unchecked((long) initialSequenceId - 1);
     }
+
+    public ulong FetchNext()
+        => unchecked((ulong) Interlocked.Increment(ref _current));
 }

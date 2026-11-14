@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,16 +12,14 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Events
+namespace DotPulsar.Internal.Events;
+
+using DotPulsar.Internal.Abstractions;
+
+public sealed class ChannelConnected : IEvent
 {
-    using Abstractions;
-    using System;
+    public ChannelConnected(Guid correlationId)
+        => CorrelationId = correlationId;
 
-    public sealed class ChannelConnected : IEvent
-    {
-        public ChannelConnected(Guid correlationId)
-            => CorrelationId = correlationId;
-
-        public Guid CorrelationId { get; }
-    }
+    public Guid CorrelationId { get; }
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,25 +12,23 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Compression
+namespace DotPulsar.Internal.Compression;
+
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.PulsarApi;
+
+public sealed class DecompressorFactory : IDecompressorFactory
 {
-    using DotPulsar.Internal.Abstractions;
-    using DotPulsar.Internal.PulsarApi;
-    using System;
+    private readonly Func<IDecompress> _create;
 
-    public sealed class DecompressorFactory : IDecompressorFactory
+    public DecompressorFactory(CompressionType compressionType, Func<IDecompress> create)
     {
-        private readonly Func<IDecompress> _create;
-
-        public DecompressorFactory(CompressionType compressionType, Func<IDecompress> create)
-        {
-            CompressionType = compressionType;
-            _create = create;
-        }
-
-        public CompressionType CompressionType { get; }
-
-        public IDecompress Create()
-            => _create();
+        CompressionType = compressionType;
+        _create = create;
     }
+
+    public CompressionType CompressionType { get; }
+
+    public IDecompress Create()
+        => _create();
 }

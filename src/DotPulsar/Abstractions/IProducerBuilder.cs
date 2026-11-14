@@ -12,46 +12,66 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Abstractions;
+
+/// <summary>
+/// A producer building abstraction.
+/// </summary>
+public interface IProducerBuilder<TMessage>
 {
     /// <summary>
-    /// A producer building abstraction.
+    /// Whether to attach the sending trace's parent and state to the outgoing messages metadata. The default is 'false'.
     /// </summary>
-    public interface IProducerBuilder<TMessage>
-    {
-        /// <summary>
-        /// Set the compression type. The default is 'None'.
-        /// </summary>
-        IProducerBuilder<TMessage> CompressionType(CompressionType compressionType);
+    IProducerBuilder<TMessage> AttachTraceInfoToMessages(bool attachTraceInfoToMessages);
 
-        /// <summary>
-        /// Set the initial sequence id. The default is 0.
-        /// </summary>
-        IProducerBuilder<TMessage> InitialSequenceId(ulong initialSequenceId);
+    /// <summary>
+    /// Set the compression type. The default is 'None'.
+    /// </summary>
+    IProducerBuilder<TMessage> CompressionType(CompressionType compressionType);
 
-        /// <summary>
-        /// Set the producer name. This is optional.
-        /// </summary>
-        IProducerBuilder<TMessage> ProducerName(string name);
+    /// <summary>
+    /// Set the initial sequence id. The default is 0.
+    /// </summary>
+    IProducerBuilder<TMessage> InitialSequenceId(ulong initialSequenceId);
 
-        /// <summary>
-        /// Register a state changed handler.
-        /// </summary>
-        IProducerBuilder<TMessage> StateChangedHandler(IHandleStateChanged<ProducerStateChanged> handler);
+    /// <summary>
+    /// Set the producer access mode. The default is 'Shared'.
+    /// </summary>
+    /// <returns></returns>
+    IProducerBuilder<TMessage> ProducerAccessMode(ProducerAccessMode producerAccessMode);
 
-        /// <summary>
-        /// Set the topic for this producer. This is required.
-        /// </summary>
-        IProducerBuilder<TMessage> Topic(string topic);
+    /// <summary>
+    /// Set the producer name. This is optional.
+    /// </summary>
+    IProducerBuilder<TMessage> ProducerName(string name);
 
-        /// <summary>
-        /// Set the message router for this producer. The default is RoundRobinPartitionRouter.
-        /// </summary>
-        IProducerBuilder<TMessage> MessageRouter(IMessageRouter messageRouter);
+    /// <summary>
+    /// Register a state changed handler.
+    /// </summary>
+    IProducerBuilder<TMessage> StateChangedHandler(IHandleStateChanged<ProducerStateChanged> handler);
 
-        /// <summary>
-        /// Create the producer.
-        /// </summary>
-        IProducer<TMessage> Create();
-    }
+    /// <summary>
+    /// Set the topic for this producer. This is required.
+    /// </summary>
+    IProducerBuilder<TMessage> Topic(string topic);
+
+    /// <summary>
+    /// Set the message router for this producer. The default is RoundRobinPartitionRouter.
+    /// </summary>
+    IProducerBuilder<TMessage> MessageRouter(IMessageRouter messageRouter);
+
+    /// <summary>
+    /// Set the max size of the queue holding the messages pending to receive an acknowledgment from the broker. The default is 500.
+    /// </summary>
+    IProducerBuilder<TMessage> MaxPendingMessages(uint maxPendingMessages);
+
+    /// <summary>
+    /// Add/Set a property key/value on the producer. This is optional.
+    /// </summary>
+    IProducerBuilder<TMessage> ProducerProperty(string key, string value);
+
+    /// <summary>
+    /// Create the producer.
+    /// </summary>
+    IProducer<TMessage> Create();
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,14 +12,16 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
-{
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+namespace DotPulsar.Internal.Abstractions;
 
-    public interface IConnectionPool : IAsyncDisposable
-    {
-        ValueTask<IConnection> FindConnectionForTopic(string topic, CancellationToken cancellationToken = default);
-    }
+using DotPulsar.Internal.PulsarApi;
+using System.Text.RegularExpressions;
+
+public interface IConnectionPool : IAsyncDisposable
+{
+    ValueTask<IConnection> FindConnectionForTopic(string topic, CancellationToken cancellationToken = default);
+
+    ValueTask<uint> GetNumberOfPartitions(string topic, CancellationToken cancellationToken = default);
+
+    ValueTask<IEnumerable<string>> GetTopicsOfNamespace(CommandGetTopicsOfNamespace.Types.Mode mode, Regex topicsPattern, CancellationToken cancellationToken = default);
 }

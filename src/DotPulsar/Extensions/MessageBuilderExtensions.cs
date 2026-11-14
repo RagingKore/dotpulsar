@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,29 +12,25 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Extensions
+namespace DotPulsar.Extensions;
+
+using DotPulsar.Abstractions;
+using System.Buffers;
+
+/// <summary>
+/// Extensions for IMessageBuilder.
+/// </summary>
+public static class MessageBuilderExtensions
 {
-    using DotPulsar.Abstractions;
-    using System;
-    using System.Buffers;
-    using System.Threading;
-    using System.Threading.Tasks;
+    /// <summary>
+    /// Sends a message.
+    /// </summary>
+    public static async ValueTask<MessageId> Send(this IMessageBuilder<ReadOnlySequence<byte>> builder, byte[] payload, CancellationToken cancellationToken = default)
+        => await builder.Send(new ReadOnlySequence<byte>(payload), cancellationToken).ConfigureAwait(false);
 
     /// <summary>
-    /// Extensions for IMessageBuilder.
+    /// Sends a message.
     /// </summary>
-    public static class MessageBuilderExtensions
-    {
-        /// <summary>
-        /// Sends a message.
-        /// </summary>
-        public static async ValueTask<MessageId> Send(this IMessageBuilder<ReadOnlySequence<byte>> builder, byte[] payload, CancellationToken cancellationToken = default)
-            => await builder.Send(new ReadOnlySequence<byte>(payload), cancellationToken).ConfigureAwait(false);
-
-        /// <summary>
-        /// Sends a message.
-        /// </summary>
-        public static async ValueTask<MessageId> Send(this IMessageBuilder<ReadOnlySequence<byte>> builder, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
-            => await builder.Send(new ReadOnlySequence<byte>(payload), cancellationToken).ConfigureAwait(false);
-    }
+    public static async ValueTask<MessageId> Send(this IMessageBuilder<ReadOnlySequence<byte>> builder, ReadOnlyMemory<byte> payload, CancellationToken cancellationToken = default)
+        => await builder.Send(new ReadOnlySequence<byte>(payload), cancellationToken).ConfigureAwait(false);
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,41 +12,49 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Extensions
+namespace DotPulsar.Extensions;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Internal;
+
+/// <summary>
+/// Extensions for IProducerBuilder.
+/// </summary>
+public static class ProducerBuilderExtensions
 {
-    using DotPulsar.Abstractions;
-    using DotPulsar.Internal;
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+    /// <summary>
+    /// Register a state changed handler.
+    /// </summary>
+    public static IProducerBuilder<TMessage> StateChangedHandler<TMessage>(
+        this IProducerBuilder<TMessage> builder,
+        Action<ProducerStateChanged> handler)
+    {
+        void forwarder(ProducerStateChanged producerStateChanged, CancellationToken _) => handler(producerStateChanged);
+        builder.StateChangedHandler(new ActionStateChangedHandler<ProducerStateChanged>(forwarder, default));
+        return builder;
+    }
 
     /// <summary>
-    /// Extensions for IProducerBuilder.
+    /// Register a state changed handler.
     /// </summary>
-    public static class ProducerBuilderExtensions
+    public static IProducerBuilder<TMessage> StateChangedHandler<TMessage>(
+        this IProducerBuilder<TMessage> builder,
+        Action<ProducerStateChanged, CancellationToken> handler,
+        CancellationToken cancellationToken = default)
     {
-        /// <summary>
-        /// Register a state changed handler.
-        /// </summary>
-        public static IProducerBuilder<TMessage> StateChangedHandler<TMessage>(
-            this IProducerBuilder<TMessage> builder,
-            Action<ProducerStateChanged, CancellationToken> handler,
-            CancellationToken cancellationToken = default)
-        {
-            builder.StateChangedHandler(new ActionStateChangedHandler<ProducerStateChanged>(handler, cancellationToken));
-            return builder;
-        }
+        builder.StateChangedHandler(new ActionStateChangedHandler<ProducerStateChanged>(handler, cancellationToken));
+        return builder;
+    }
 
-        /// <summary>
-        /// Register a state changed handler.
-        /// </summary>
-        public static IProducerBuilder<TMessage> StateChangedHandler<TMessage>(
-            this IProducerBuilder<TMessage> builder,
-            Func<ProducerStateChanged, CancellationToken, ValueTask> handler,
-            CancellationToken cancellationToken = default)
-        {
-            builder.StateChangedHandler(new FuncStateChangedHandler<ProducerStateChanged>(handler, cancellationToken));
-            return builder;
-        }
+    /// <summary>
+    /// Register a state changed handler.
+    /// </summary>
+    public static IProducerBuilder<TMessage> StateChangedHandler<TMessage>(
+        this IProducerBuilder<TMessage> builder,
+        Func<ProducerStateChanged, CancellationToken, ValueTask> handler,
+        CancellationToken cancellationToken = default)
+    {
+        builder.StateChangedHandler(new FuncStateChangedHandler<ProducerStateChanged>(handler, cancellationToken));
+        return builder;
     }
 }

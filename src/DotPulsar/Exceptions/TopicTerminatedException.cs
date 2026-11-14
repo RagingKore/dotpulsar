@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,10 +12,12 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Exceptions
+namespace DotPulsar.Exceptions;
+
+/// <summary>
+/// The topic has been terminated
+/// </summary>
+public sealed class TopicTerminatedException : DotPulsarException
 {
-    public sealed class TopicTerminatedException : DotPulsarException
-    {
-        public TopicTerminatedException(string message) : base(message) { }
-    }
+    public TopicTerminatedException(string message) : base(message) { }
 }

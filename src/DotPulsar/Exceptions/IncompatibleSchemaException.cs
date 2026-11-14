@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,10 +12,12 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Exceptions
+namespace DotPulsar.Exceptions;
+
+/// <summary>
+/// Specified schema was incompatible with topic schema
+/// </summary>
+public sealed class IncompatibleSchemaException : DotPulsarException
 {
-    public sealed class IncompatibleSchemaException : DotPulsarException
-    {
-        public IncompatibleSchemaException(string message) : base(message) { }
-    }
+    public IncompatibleSchemaException(string message) : base(message) { }
 }

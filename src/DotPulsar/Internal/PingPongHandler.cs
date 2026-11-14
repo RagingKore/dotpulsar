@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,33 +12,79 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Internal.PulsarApi;
+using System.Diagnostics;
+
+public sealed class PingPongHandler : IStateHolder<PingPongHandlerState>, IAsyncDisposable
 {
-    using Abstractions;
-    using PulsarApi;
-    using System.Threading.Tasks;
+    private readonly CancellationTokenSource _cts;
+    private readonly StateManager<PingPongHandlerState> _stateManager;
+    private readonly TimeSpan _keepAliveInterval;
+    private long _lastCommand;
+    private bool _waitForPong;
 
-    public sealed class PingPongHandler
+    public IState<PingPongHandlerState> State => _stateManager;
+
+    public PingPongHandler(TimeSpan keepAliveInterval)
     {
-        private readonly IConnection _connection;
-        private readonly CommandPong _pong;
+        _cts = new CancellationTokenSource();
+        _stateManager = new StateManager<PingPongHandlerState>(PingPongHandlerState.Active, PingPongHandlerState.TimedOut, PingPongHandlerState.Closed);
+        _keepAliveInterval = keepAliveInterval;
+        _lastCommand = Stopwatch.GetTimestamp();
+        _ = Task.Factory.StartNew(() => Watch());
+    }
 
-        public PingPongHandler(IConnection connection)
+    public void Incoming(BaseCommand.Types.Type _)
+    {
+        Interlocked.Exchange(ref _lastCommand, Stopwatch.GetTimestamp());
+        _waitForPong = false;
+    }
+
+    private TimeSpan GetElapsedTimeSinceLastCommand()
+    {
+        var lastCommand = Interlocked.Read(ref _lastCommand);
+        var now = Stopwatch.GetTimestamp();
+        var elapsedTicks = now - lastCommand;
+        if (elapsedTicks > 0)
+            return TimeSpan.FromSeconds(elapsedTicks / Stopwatch.Frequency);
+        return TimeSpan.Zero;
+    }
+
+    private async void Watch()
+    {
+        var waitFor = _keepAliveInterval;
+
+        while (!_cts.IsCancellationRequested)
         {
-            _connection = connection;
-            _pong = new CommandPong();
-        }
-
-        public void GotPing()
-            => Task.Factory.StartNew(() => SendPong());
-
-        private async Task SendPong()
-        {
-            try
+            await Task.Delay(waitFor).ConfigureAwait(false);
+            var elapsed = GetElapsedTimeSinceLastCommand();
+            if (elapsed > _keepAliveInterval)
             {
-                await _connection.Send(_pong, default).ConfigureAwait(false);
+                if (_waitForPong)
+                {
+                    _stateManager.SetState(PingPongHandlerState.TimedOut);
+                    return;
+                }
+
+                _waitForPong = true;
+                _stateManager.SetState(PingPongHandlerState.ThresholdExceeded);
+                waitFor = _keepAliveInterval;
             }
-            catch { }
+            else
+            {
+                _stateManager.SetState(PingPongHandlerState.Active);
+                waitFor = _keepAliveInterval.Subtract(elapsed);
+            }
         }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _cts.Cancel();
+        _stateManager.SetState(PingPongHandlerState.Closed);
+        return new ValueTask();
     }
 }

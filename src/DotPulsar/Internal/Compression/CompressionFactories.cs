@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,45 +12,61 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Compression
+namespace DotPulsar.Internal.Compression;
+
+using DotPulsar.Internal.Abstractions;
+
+public static class CompressionFactories
 {
-    using DotPulsar.Internal.Abstractions;
-    using System.Collections.Generic;
+    private static readonly List<ICompressorFactory> _compressorFactories;
+    private static readonly List<IDecompressorFactory> _decompressorFactories;
 
-    public static class CompressionFactories
+    static CompressionFactories()
     {
-        private static readonly List<ICompressorFactory> _compressorFactories;
-        private static readonly List<IDecompressorFactory> _decompressorFactories;
+        _compressorFactories = [];
+        _decompressorFactories = [];
 
-        static CompressionFactories()
-        {
-            _compressorFactories = new List<ICompressorFactory>();
-            _decompressorFactories = new List<IDecompressorFactory>();
-
-
-            if (Lz4Compression.TryLoading(out ICompressorFactory? compressorFactory, out IDecompressorFactory? decompressorFactory))
-                Add(compressorFactory, decompressorFactory);
-
-            if (SnappyCompression.TryLoading(out compressorFactory, out decompressorFactory))
-                Add(compressorFactory, decompressorFactory);
-
-            if (ZlibCompression.TryLoading(out compressorFactory, out decompressorFactory))
-                Add(compressorFactory, decompressorFactory);
-
-            if (ZstdCompression.TryLoading(out compressorFactory, out decompressorFactory))
-                Add(compressorFactory, decompressorFactory);
-        }
-
-        private static void Add(ICompressorFactory? compressorFactory, IDecompressorFactory? decompressorFactory)
-        {
-            _compressorFactories.Add(compressorFactory!);
-            _decompressorFactories.Add(decompressorFactory!);
-        }
-
-        public static IEnumerable<ICompressorFactory> CompressorFactories()
-            => _compressorFactories;
-
-        public static IEnumerable<IDecompressorFactory> DecompressorFactories()
-            => _decompressorFactories;
+        LoadSupportForLz4();
+        LoadSupportForSnappy();
+        LoadSupportForZlib();
+        LoadSupportForZstd();
     }
+
+    private static void LoadSupportForLz4()
+    {
+        if (Lz4Compression.TryLoading(out var compressorFactory, out var decompressorFactory))
+            Add(compressorFactory, decompressorFactory);
+    }
+
+    private static void LoadSupportForSnappy()
+    {
+        if (SnappyCompression.TryLoading(out var compressorFactory, out var decompressorFactory))
+            Add(compressorFactory, decompressorFactory);
+    }
+
+    private static void LoadSupportForZlib()
+    {
+        if (BuiltinZlibCompression.TryLoading(out var compressorFactory, out var decompressorFactory))
+            Add(compressorFactory, decompressorFactory);
+    }
+
+    private static void LoadSupportForZstd()
+    {
+        if (ZstdSharpCompression.TryLoading(out var compressorFactory, out var decompressorFactory))
+            Add(compressorFactory, decompressorFactory);
+        else if (ZstdCompression.TryLoading(out compressorFactory, out decompressorFactory))
+            Add(compressorFactory, decompressorFactory);
+    }
+
+    private static void Add(ICompressorFactory? compressorFactory, IDecompressorFactory? decompressorFactory)
+    {
+        _compressorFactories.Add(compressorFactory!);
+        _decompressorFactories.Add(decompressorFactory!);
+    }
+
+    public static IEnumerable<ICompressorFactory> CompressorFactories()
+        => _compressorFactories;
+
+    public static IEnumerable<IDecompressorFactory> DecompressorFactories()
+        => _decompressorFactories;
 }

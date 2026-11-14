@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,47 +12,56 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using System.Collections.Concurrent;
+
+public sealed class Awaiter<T, TResult> : IDisposable where T : notnull
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
+    private readonly ConcurrentDictionary<T, TaskCompletionSource<TResult>> _items;
 
-    public sealed class Awaiter<T, TResult> : IDisposable where T : notnull
+    public Awaiter()
+        => _items = new ConcurrentDictionary<T, TaskCompletionSource<TResult>>();
+
+    public Task<TResult> CreateTask(T item)
     {
-        private readonly ConcurrentDictionary<T, TaskCompletionSource<TResult>> _items;
+        var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        AddOrReplace(item, tcs);
+        return tcs.Task;
+    }
 
-        public Awaiter()
-            => _items = new ConcurrentDictionary<T, TaskCompletionSource<TResult>>();
+    public void AddTaskCompletionSource(T item, TaskCompletionSource<TResult> tcs)
+    {
+        AddOrReplace(item, tcs);
+    }
 
-        public Task<TResult> CreateTask(T item)
-        {
-            var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _ = _items.TryAdd(item, tcs);
-            return tcs.Task;
-        }
+    private void AddOrReplace(T item, TaskCompletionSource<TResult> tcs)
+    {
+        if (_items.TryRemove(item, out var oldTcs))
+            oldTcs.TrySetCanceled();
 
-        public void SetResult(T item, TResult result)
-        {
-            if (_items.TryRemove(item, out var tcs))
-                tcs.SetResult(result);
-        }
+        _items.TryAdd(item, tcs);
+    }
 
-        public void Cancel(T item)
-        {
-            if (_items.TryRemove(item, out var tcs))
-                tcs.SetCanceled();
-        }
+    public void SetResult(T item, TResult result)
+    {
+        if (_items.TryRemove(item, out var tcs))
+            tcs.TrySetResult(result);
+    }
 
-        public IEnumerable<T> Keys => _items.Keys;
+    public void Cancel(T item)
+    {
+        if (_items.TryRemove(item, out var tcs))
+            tcs.TrySetCanceled();
+    }
 
-        public void Dispose()
-        {
-            foreach (var item in _items.Values)
-                item.SetCanceled();
+    public IEnumerable<T> Keys => _items.Keys;
 
-            _items.Clear();
-        }
+    public void Dispose()
+    {
+        foreach (var item in _items.Values)
+            item.TrySetCanceled();
+
+        _items.Clear();
     }
 }

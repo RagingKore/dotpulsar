@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,39 +12,35 @@
  * limitations under the License.
  */
 
-namespace DotPulsar
+namespace DotPulsar;
+
+public sealed class ExceptionContext
 {
-    using System;
-    using System.Threading;
-
-    public sealed class ExceptionContext
+    internal ExceptionContext(Exception exception, CancellationToken cancellationToken)
     {
-        internal ExceptionContext(Exception exception, CancellationToken cancellationToken)
-        {
-            Exception = exception;
-            CancellationToken = cancellationToken;
-            ExceptionHandled = false;
-            Result = FaultAction.Rethrow;
-        }
-
-        /// <summary>
-        /// The exception caught while executing the operation. This exception will be thrown if the fault action Result is set to 'ThrowException'.
-        /// </summary>
-        public Exception Exception { set; get; }
-
-        /// <summary>
-        /// The cancellation token given to the operation.
-        /// </summary>
-        public CancellationToken CancellationToken { get; }
-
-        /// <summary>
-        /// Gets or sets an indication that the exception has been handled. If 'true' no other exception handlers will be invoked.
-        /// </summary>
-        public bool ExceptionHandled { get; set; }
-
-        /// <summary>
-        /// Gets or sets the FaultAction.
-        /// </summary>
-        public FaultAction Result { get; set; }
+        Exception = exception;
+        CancellationToken = cancellationToken;
+        ExceptionHandled = false;
+        Result = FaultAction.Rethrow;
     }
+
+    /// <summary>
+    /// The exception caught while executing the operation. This exception will be thrown if the fault action Result is set to 'ThrowException'.
+    /// </summary>
+    public Exception Exception { set; get; }
+
+    /// <summary>
+    /// The cancellation token given to the operation.
+    /// </summary>
+    public CancellationToken CancellationToken { get; }
+
+    /// <summary>
+    /// Gets or sets an indication that the exception has been handled. If 'true' no other exception handlers will be invoked.
+    /// </summary>
+    public bool ExceptionHandled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the FaultAction.
+    /// </summary>
+    public FaultAction Result { get; set; }
 }

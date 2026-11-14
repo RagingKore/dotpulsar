@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,130 +12,304 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Exceptions;
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.Compression;
+using DotPulsar.Internal.PulsarApi;
+
+public sealed class Reader<TMessage> : IReader<TMessage>
 {
-    using Abstractions;
-    using DotPulsar.Abstractions;
-    using DotPulsar.Exceptions;
-    using DotPulsar.Internal.PulsarApi;
-    using Events;
-    using System;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly TaskCompletionSource<IMessage<TMessage>> _emptyTaskCompletionSource;
+    private readonly ReaderOptions<TMessage> _readerOptions;
+    private readonly IHandleException _exceptionHandler;
+    private readonly IConnectionPool _connectionPool;
+    private readonly ProcessManager _processManager;
+    private readonly CancellationTokenSource _cts;
+    private readonly Executor _executor;
+    private readonly StateManager<ReaderState> _state;
+    private readonly SemaphoreSlim _semaphoreSlim;
+    private readonly AsyncLock _lock;
+    private SubReader<TMessage>[] _subReaders;
+    private bool _allSubReadersAreReady;
+    private Task<IMessage<TMessage>>[] _receiveTasks;
+    private int _subReaderIndex;
+    private bool _isPartitionedTopic;
+    private int _numberOfPartitions;
+    private int _isDisposed;
+    private Exception? _faultException;
 
-    public sealed class Reader<TMessage> : IEstablishNewChannel, IReader<TMessage>
+    public Uri ServiceUrl { get; }
+    public string Topic { get; }
+    public IState<ReaderState> State => _state;
+
+    public Reader(
+        Uri serviceUrl,
+        ReaderOptions<TMessage> readerOptions,
+        IHandleException exceptionHandler,
+        IConnectionPool connectionPool)
     {
-        private readonly Guid _correlationId;
-        private readonly IRegisterEvent _eventRegister;
-        private IConsumerChannel<TMessage> _channel;
-        private readonly IExecute _executor;
-        private readonly IStateChanged<ReaderState> _state;
-        private readonly IConsumerChannelFactory<TMessage> _factory;
-        private int _isDisposed;
+        _lock = new AsyncLock();
+        ServiceUrl = serviceUrl;
+        Topic = readerOptions.Topic;
+        _readerOptions = readerOptions;
+        _connectionPool = connectionPool;
+        _processManager = new ProcessManager();
+        _exceptionHandler = exceptionHandler;
+        _semaphoreSlim = new SemaphoreSlim(1);
+        _state = CreateStateManager();
+        _receiveTasks = Array.Empty<Task<IMessage<TMessage>>>();
+        _cts = new CancellationTokenSource();
+        _executor = new Executor(Guid.Empty, _processManager, _exceptionHandler);
+        _isDisposed = 0;
+        _subReaders = Array.Empty<SubReader<TMessage>>();
 
-        public Uri ServiceUrl { get; }
-        public string Topic { get; }
+        _emptyTaskCompletionSource = new TaskCompletionSource<IMessage<TMessage>>();
 
-        public Reader(
-            Guid correlationId,
-            Uri serviceUrl,
-            string topic,
-            IRegisterEvent eventRegister,
-            IConsumerChannel<TMessage> initialChannel,
-            IExecute executor,
-            IStateChanged<ReaderState> state,
-            IConsumerChannelFactory<TMessage> factory)
+        _ = Setup();
+    }
+
+    private async Task Setup()
+    {
+        try
         {
-            _correlationId = correlationId;
-            ServiceUrl = serviceUrl;
-            Topic = topic;
-            _eventRegister = eventRegister;
-            _channel = initialChannel;
-            _executor = executor;
-            _state = state;
-            _factory = factory;
-            _isDisposed = 0;
-
-            _eventRegister.Register(new ReaderCreated(_correlationId));
+            await _semaphoreSlim.WaitAsync(_cts.Token).ConfigureAwait(false);
+            await _executor.Execute(Monitor, _cts.Token).ConfigureAwait(false);
         }
-
-        public async ValueTask<ReaderState> OnStateChangeTo(ReaderState state, CancellationToken cancellationToken)
-            => await _state.StateChangedTo(state, cancellationToken).ConfigureAwait(false);
-
-        public async ValueTask<ReaderState> OnStateChangeFrom(ReaderState state, CancellationToken cancellationToken)
-            => await _state.StateChangedFrom(state, cancellationToken).ConfigureAwait(false);
-
-        public bool IsFinalState()
-            => _state.IsFinalState();
-
-        public bool IsFinalState(ReaderState state)
-            => _state.IsFinalState(state);
-
-        public async ValueTask<MessageId> GetLastMessageId(CancellationToken cancellationToken)
+        catch (Exception exception)
         {
-            ThrowIfDisposed();
-
-            var getLastMessageId = new CommandGetLastMessageId();
-            return await _executor.Execute(() => GetLastMessageId(getLastMessageId, cancellationToken), cancellationToken).ConfigureAwait(false);
-        }
-
-        private async ValueTask<MessageId> GetLastMessageId(CommandGetLastMessageId command, CancellationToken cancellationToken)
-            => await _channel.Send(command, cancellationToken).ConfigureAwait(false);
-
-        public async ValueTask<IMessage<TMessage>> Receive(CancellationToken cancellationToken)
-        {
-            ThrowIfDisposed();
-
-            return await _executor.Execute(() => ReceiveMessage(cancellationToken), cancellationToken).ConfigureAwait(false);
-        }
-
-        private async ValueTask<IMessage<TMessage>> ReceiveMessage(CancellationToken cancellationToken)
-            => await _channel.Receive(cancellationToken).ConfigureAwait(false);
-
-        public async ValueTask Seek(MessageId messageId, CancellationToken cancellationToken)
-        {
-            ThrowIfDisposed();
-
-            var seek = new CommandSeek { MessageId = messageId.ToMessageIdData() };
-            await _executor.Execute(() => Seek(seek, cancellationToken), cancellationToken).ConfigureAwait(false);
-        }
-
-        public async ValueTask Seek(ulong publishTime, CancellationToken cancellationToken)
-        {
-            ThrowIfDisposed();
-
-            var seek = new CommandSeek { MessagePublishTime = publishTime };
-            await _executor.Execute(() => Seek(seek, cancellationToken), cancellationToken).ConfigureAwait(false);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            if (_cts.IsCancellationRequested)
                 return;
 
-            _eventRegister.Register(new ReaderDisposed(_correlationId));
-            await _channel.ClosedByClient(CancellationToken.None).ConfigureAwait(false);
-            await _channel.DisposeAsync().ConfigureAwait(false);
+            _faultException = exception;
+            _state.SetState(ReaderState.Faulted);
+            _semaphoreSlim.Release();
         }
+    }
 
-        private async Task Seek(CommandSeek command, CancellationToken cancellationToken)
-            => await _channel.Send(command, cancellationToken).ConfigureAwait(false);
+    private async Task Monitor()
+    {
+        _numberOfPartitions = Convert.ToInt32(await _connectionPool.GetNumberOfPartitions(Topic, _cts.Token).ConfigureAwait(false));
+        _isPartitionedTopic = _numberOfPartitions != 0;
+        var numberOfSubReaders = _isPartitionedTopic ? _numberOfPartitions : 1;
+        _receiveTasks = new Task<IMessage<TMessage>>[numberOfSubReaders];
+        _subReaders = new SubReader<TMessage>[numberOfSubReaders];
+        var monitoringTasks = new Task<ReaderState>[numberOfSubReaders];
+        var states = new ReaderState[numberOfSubReaders];
+        _subReaderIndex = _isPartitionedTopic ? -1 : 0;
 
-        public async Task EstablishNewChannel(CancellationToken cancellationToken)
+        for (var i = 0; i < numberOfSubReaders; i++)
         {
-            var channel = await _executor.Execute(() => _factory.Create(cancellationToken), cancellationToken).ConfigureAwait(false);
-
-            var oldChannel = _channel;
-            _channel = channel;
-
-            if (oldChannel is not null)
-                await oldChannel.DisposeAsync().ConfigureAwait(false);
+            _receiveTasks[i] = _emptyTaskCompletionSource.Task;
+            var topicName = _isPartitionedTopic ? GetPartitionedTopicName(i) : Topic;
+            _subReaders[i] = CreateSubReader(topicName);
+            monitoringTasks[i] = _subReaders[i].State.OnStateChangeFrom(ReaderState.Disconnected, _cts.Token).AsTask();
         }
 
-        private void ThrowIfDisposed()
+        _allSubReadersAreReady = true;
+        _semaphoreSlim.Release();
+
+        while (true)
         {
-            if (_isDisposed != 0)
-                throw new ReaderDisposedException(GetType().FullName!);
+            await Task.WhenAny(monitoringTasks).ConfigureAwait(false);
+
+            for (var i = 0; i < numberOfSubReaders; ++i)
+            {
+                var task = monitoringTasks[i];
+                if (!task.IsCompleted)
+                    continue;
+
+                var state = task.Result;
+                states[i] = state;
+                monitoringTasks[i] = _subReaders[i].State.OnStateChangeFrom(state, _cts.Token).AsTask();
+            }
+
+            if (!_isPartitionedTopic)
+                _state.SetState(states[0]);
+            else if (states.Any(x => x == ReaderState.Faulted))
+                _state.SetState(ReaderState.Faulted);
+            else if (states.All(x => x == ReaderState.Connected))
+                _state.SetState(ReaderState.Connected);
+            else if (states.All(x => x == ReaderState.ReachedEndOfTopic))
+                _state.SetState(ReaderState.ReachedEndOfTopic);
+            else if (states.All(x => x == ReaderState.Disconnected))
+                _state.SetState(ReaderState.Disconnected);
+            else
+                _state.SetState(ReaderState.PartiallyConnected);
         }
+    }
+
+    public async ValueTask<IEnumerable<MessageId>> GetLastMessageIds(CancellationToken cancellationToken)
+    {
+        await Guard(cancellationToken).ConfigureAwait(false);
+
+        if (!_isPartitionedTopic)
+            return [await _subReaders[_subReaderIndex].GetLastMessageId(cancellationToken).ConfigureAwait(false)];
+
+        var getLastMessageIdsTasks = new List<Task<MessageId>>(_numberOfPartitions);
+
+        foreach (var subReader in _subReaders)
+        {
+            var getLastMessageIdTask = subReader.GetLastMessageId(cancellationToken);
+            getLastMessageIdsTasks.Add(getLastMessageIdTask.AsTask());
+        }
+
+        //await all of the tasks.
+        await Task.WhenAll(getLastMessageIdsTasks).ConfigureAwait(false);
+
+        //collect MessageIds
+        var messageIds = new List<MessageId>();
+        for (var i = 0; i < _subReaders.Length; i++)
+        {
+            messageIds.Add(getLastMessageIdsTasks[i].Result);
+        }
+        return messageIds;
+    }
+
+    public async ValueTask<IMessage<TMessage>> Receive(CancellationToken cancellationToken)
+    {
+        await Guard(cancellationToken).ConfigureAwait(false);
+
+        if (!_isPartitionedTopic)
+            return await _subReaders[_subReaderIndex].Receive(cancellationToken).ConfigureAwait(false);
+
+        var iterations = 0;
+        using (await _lock.Lock(cancellationToken).ConfigureAwait(false))
+        {
+            while (true)
+            {
+                iterations++;
+                _subReaderIndex++;
+                if (_subReaderIndex == _subReaders.Length)
+                    _subReaderIndex = 0;
+
+                var receiveTask = _receiveTasks[_subReaderIndex];
+                if (receiveTask == _emptyTaskCompletionSource.Task)
+                {
+                    var receiveTaskValueTask = _subReaders[_subReaderIndex].Receive(cancellationToken);
+                    if (receiveTaskValueTask.IsCompleted)
+                        return receiveTaskValueTask.Result;
+                    _receiveTasks[_subReaderIndex] = receiveTaskValueTask.AsTask();
+                }
+                else
+                {
+                    if (receiveTask.IsCompleted)
+                    {
+                        _receiveTasks[_subReaderIndex] = _emptyTaskCompletionSource.Task;
+                        return receiveTask.Result;
+                    }
+                }
+                if (iterations == _subReaders.Length)
+                    await Task.WhenAny(_receiveTasks).ConfigureAwait(false);
+            }
+        }
+    }
+
+    public async ValueTask Seek(MessageId messageId, CancellationToken cancellationToken)
+    {
+        await Guard(cancellationToken).ConfigureAwait(false);
+
+        if (!_isPartitionedTopic)
+        {
+            await _subReaders[_subReaderIndex].Seek(messageId, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var seekTasks = new List<Task>(_numberOfPartitions);
+        foreach (var subReader in _subReaders)
+        {
+            var getLastMessageIdTask = subReader.Seek(messageId, cancellationToken);
+            seekTasks.Add(getLastMessageIdTask.AsTask());
+        }
+        await Task.WhenAll(seekTasks).ConfigureAwait(false);
+    }
+
+    public async ValueTask Seek(ulong publishTime, CancellationToken cancellationToken)
+    {
+        await Guard(cancellationToken).ConfigureAwait(false);
+
+        if (!_isPartitionedTopic)
+        {
+            await _subReaders[_subReaderIndex].Seek(publishTime, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var seekTasks = new List<Task>(_numberOfPartitions);
+        foreach (var subReader in _subReaders)
+        {
+            var getLastMessageIdTask = subReader.Seek(publishTime, cancellationToken);
+            seekTasks.Add(getLastMessageIdTask.AsTask());
+        }
+        await Task.WhenAll(seekTasks).ConfigureAwait(false);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+            return;
+
+        _cts.Cancel();
+        _cts.Dispose();
+
+        await _processManager.DisposeAsync().ConfigureAwait(false);
+
+        foreach (var subReader in _subReaders)
+        {
+            if (subReader is not null)
+                await subReader.DisposeAsync().ConfigureAwait(false);
+        }
+
+        await _lock.DisposeAsync().ConfigureAwait(false);
+        _state.SetState(ReaderState.Closed);
+    }
+
+    private static StateManager<ReaderState> CreateStateManager()
+        => new(ReaderState.Disconnected, ReaderState.Closed, ReaderState.ReachedEndOfTopic, ReaderState.Faulted);
+
+    private SubReader<TMessage> CreateSubReader(string topic)
+    {
+        var correlationId = Guid.NewGuid();
+
+        var subscription = _readerOptions.SubscriptionName is not null ? _readerOptions.SubscriptionName : $"{_readerOptions.SubscriptionRolePrefix}-{correlationId:N}";
+
+        var subscribe = new CommandSubscribe
+        {
+            ConsumerName = _readerOptions.ReaderName ?? subscription,
+            Durable = false,
+            ReadCompacted = _readerOptions.ReadCompacted,
+            StartMessageId = _readerOptions.StartMessageId.ToMessageIdData(),
+            Subscription = subscription,
+            Topic = topic,
+            SubType = CommandSubscribe.Types.SubType.Exclusive
+        };
+        var messagePrefetchCount = _readerOptions.MessagePrefetchCount;
+        var messageFactory = new MessageFactory<TMessage>(_readerOptions.Schema);
+        var batchHandler = new BatchHandler<TMessage>(false, messageFactory);
+        var decompressorFactories = CompressionFactories.DecompressorFactories();
+        var factory = new ConsumerChannelFactory<TMessage>(correlationId, _processManager, _connectionPool, subscribe, messagePrefetchCount, batchHandler, messageFactory, decompressorFactories, topic);
+        var stateManager = new StateManager<ReaderState>(ReaderState.Disconnected, ReaderState.Closed, ReaderState.ReachedEndOfTopic, ReaderState.Faulted);
+        var initialChannel = new NotReadyChannel<TMessage>();
+        var executor = new Executor(correlationId, _processManager, _exceptionHandler);
+        var subReader = new SubReader<TMessage>(correlationId, ServiceUrl, topic, _processManager, initialChannel, executor, stateManager, factory);
+        var process = new ReaderProcess(correlationId, stateManager, subReader);
+        _processManager.Add(process);
+        process.Start();
+        return subReader;
+    }
+
+    private string GetPartitionedTopicName(int partitionNumber) => $"{Topic}-partition-{partitionNumber}";
+
+    private async Task Guard(CancellationToken cancellationToken)
+    {
+        if (!_allSubReadersAreReady)
+        {
+            await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
+            _semaphoreSlim.Release();
+        }
+
+        if (_faultException is not null)
+            throw new ReaderFaultedException(_faultException);
     }
 }

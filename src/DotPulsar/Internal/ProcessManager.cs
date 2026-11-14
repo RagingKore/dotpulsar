@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,73 +12,65 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.Events;
+using System.Collections.Concurrent;
+
+public sealed class ProcessManager : IRegisterEvent, IAsyncDisposable
 {
-    using Abstractions;
-    using Events;
-    using System;
-    using System.Collections.Concurrent;
-    using System.Linq;
-    using System.Threading.Tasks;
+    private readonly ConcurrentDictionary<Guid, IProcess> _processes;
 
-    public sealed class ProcessManager : IRegisterEvent, IAsyncDisposable
+    public ProcessManager()
     {
-        private readonly ConcurrentDictionary<Guid, IProcess> _processes;
-        private readonly IConnectionPool _connectionPool;
+        _processes = new ConcurrentDictionary<Guid, IProcess>();
+    }
 
-        public ProcessManager(IConnectionPool connectionPool)
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var proc in _processes.Values.ToArray())
+            await proc.DisposeAsync().ConfigureAwait(false);
+    }
+
+    public void Add(IProcess process)
+        => _processes[process.CorrelationId] = process;
+
+    private async void Remove(Guid correlationId)
+    {
+        if (_processes.TryRemove(correlationId, out var process))
+            await process.DisposeAsync().ConfigureAwait(false);
+    }
+
+    public void Register(IEvent e)
+    {
+        switch (e)
         {
-            _processes = new ConcurrentDictionary<Guid, IProcess>();
-            _connectionPool = connectionPool;
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            foreach (var proc in _processes.Values.ToArray())
-                await proc.DisposeAsync().ConfigureAwait(false);
-
-            await _connectionPool.DisposeAsync().ConfigureAwait(false);
-        }
-
-        public void Add(IProcess process)
-            => _processes[process.CorrelationId] = process;
-
-        private async void Remove(Guid correlationId)
-        {
-            if (_processes.TryRemove(correlationId, out var process))
-                await process.DisposeAsync().ConfigureAwait(false);
-        }
-
-        public void Register(IEvent e)
-        {
-            switch (e)
-            {
-                case ConsumerCreated _:
-                    DotPulsarEventSource.Log.ConsumerCreated();
-                    break;
-                case ConsumerDisposed consumerDisposed:
-                    Remove(consumerDisposed.CorrelationId);
-                    DotPulsarEventSource.Log.ConsumerDisposed();
-                    break;
-                case ProducerCreated _:
-                    DotPulsarEventSource.Log.ProducerCreated();
-                    break;
-                case ProducerDisposed producerDisposed:
-                    Remove(producerDisposed.CorrelationId);
-                    DotPulsarEventSource.Log.ProducerDisposed();
-                    break;
-                case ReaderCreated _:
-                    DotPulsarEventSource.Log.ReaderCreated();
-                    break;
-                case ReaderDisposed readerDisposed:
-                    Remove(readerDisposed.CorrelationId);
-                    DotPulsarEventSource.Log.ReaderDisposed();
-                    break;
-                default:
-                    if (_processes.TryGetValue(e.CorrelationId, out var process))
-                        process.Handle(e);
-                    break;
-            }
+            case ConsumerCreated _:
+                DotPulsarMeter.ConsumerCreated();
+                break;
+            case ConsumerDisposed consumerDisposed:
+                Remove(consumerDisposed.CorrelationId);
+                DotPulsarMeter.ConsumerDisposed();
+                break;
+            case ProducerCreated _:
+                DotPulsarMeter.ProducerCreated();
+                break;
+            case ProducerDisposed producerDisposed:
+                Remove(producerDisposed.CorrelationId);
+                DotPulsarMeter.ProducerDisposed();
+                break;
+            case ReaderCreated _:
+                DotPulsarMeter.ReaderCreated();
+                break;
+            case ReaderDisposed readerDisposed:
+                Remove(readerDisposed.CorrelationId);
+                DotPulsarMeter.ReaderDisposed();
+                break;
+            default:
+                if (_processes.TryGetValue(e.CorrelationId, out var process))
+                    process.Handle(e);
+                break;
         }
     }
 }

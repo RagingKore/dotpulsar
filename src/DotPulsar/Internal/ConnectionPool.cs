@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,250 +12,308 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Exceptions;
+using DotPulsar.Internal.Abstractions;
+using DotPulsar.Internal.Extensions;
+using DotPulsar.Internal.PulsarApi;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+
+public sealed class ConnectionPool : IConnectionPool
 {
-    using Abstractions;
-    using DotPulsar.Exceptions;
-    using Extensions;
-    using PulsarApi;
-    using System;
-    using System.Collections.Concurrent;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly CommandConnect _commandConnect;
+    private readonly Uri _serviceUrl;
+    private readonly Connector _connector;
+    private readonly EncryptionPolicy _encryptionPolicy;
+    private readonly ConcurrentDictionary<PulsarUrl, Connection> _connections;
+    private readonly ConcurrentDictionary<PulsarUrl, SemaphoreSlim> _connectionGates;
+    private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly string? _listenerName;
+    private readonly TimeSpan _closeInactiveConnectionsInterval;
+    private readonly TimeSpan _keepAliveInterval;
+    private readonly IAuthentication? _authentication;
 
-    public sealed class ConnectionPool : IConnectionPool
+    public ConnectionPool(
+        CommandConnect commandConnect,
+        Uri serviceUrl,
+        Connector connector,
+        EncryptionPolicy encryptionPolicy,
+        TimeSpan closeInactiveConnectionsInterval,
+        string? listenerName,
+        TimeSpan keepAliveInterval,
+        IAuthentication? authentication)
     {
-        private readonly AsyncLock _lock;
-        private readonly CommandConnect _commandConnect;
-        private readonly Uri _serviceUrl;
-        private readonly Connector _connector;
-        private readonly EncryptionPolicy _encryptionPolicy;
-        private readonly ConcurrentDictionary<PulsarUrl, Connection> _connections;
-        private readonly CancellationTokenSource _cancellationTokenSource;
-        private readonly Task _closeInactiveConnections;
-        private readonly string? _listenerName;
+        _commandConnect = commandConnect;
+        _serviceUrl = serviceUrl;
+        _connector = connector;
+        _encryptionPolicy = encryptionPolicy;
+        _listenerName = listenerName;
+        _connections = new ConcurrentDictionary<PulsarUrl, Connection>();
+        _connectionGates = new ConcurrentDictionary<PulsarUrl, SemaphoreSlim>();
+        _cancellationTokenSource = new CancellationTokenSource();
+        _closeInactiveConnectionsInterval = closeInactiveConnectionsInterval;
+        _keepAliveInterval = keepAliveInterval;
+        _authentication = authentication;
+    }
 
-        public ConnectionPool(
-            CommandConnect commandConnect,
-            Uri serviceUrl,
-            Connector connector,
-            EncryptionPolicy encryptionPolicy,
-            TimeSpan closeInactiveConnectionsInterval,
-            string? listenerName)
+    public async ValueTask DisposeAsync()
+    {
+        _cancellationTokenSource.Cancel();
+
+        foreach (var entry in _connections.ToArray())
         {
-            _lock = new AsyncLock();
-            _commandConnect = commandConnect;
-            _serviceUrl = serviceUrl;
-            _connector = connector;
-            _encryptionPolicy = encryptionPolicy;
-            _listenerName = listenerName;
-            _connections = new ConcurrentDictionary<PulsarUrl, Connection>();
-            _cancellationTokenSource = new CancellationTokenSource();
-            _closeInactiveConnections = CloseInactiveConnections(closeInactiveConnectionsInterval, _cancellationTokenSource.Token);
+            await DisposeConnection(entry.Key, entry.Value).ConfigureAwait(false);
         }
 
-        public async ValueTask DisposeAsync()
+        foreach (var gate in _connectionGates.Values)
         {
-            _cancellationTokenSource.Cancel();
+            gate.Dispose();
+        }
+    }
 
-            await _closeInactiveConnections.ConfigureAwait(false);
+    public async ValueTask<IConnection> FindConnectionForTopic(string topic, CancellationToken cancellationToken)
+    {
+        var lookup = new CommandLookupTopic
+        {
+            Topic = topic,
+            Authoritative = false
+        };
 
-            await _lock.DisposeAsync().ConfigureAwait(false);
+        if (_listenerName is not null)
+            lookup.AdvertisedListenerName = _listenerName;
 
-            foreach (var serviceUrl in _connections.Keys.ToArray())
+        var physicalUrl = _serviceUrl;
+
+        while (true)
+        {
+            var connection = await GetConnection(physicalUrl, cancellationToken).ConfigureAwait(false);
+            var response = await connection.Send(lookup, cancellationToken).ConfigureAwait(false);
+
+            response.Expect(BaseCommand.Types.Type.LookupResponse);
+
+            if (response.LookupTopicResponse.Response == CommandLookupTopicResponse.Types.LookupType.Failed)
+                response.LookupTopicResponse.Throw();
+
+            lookup.Authoritative = response.LookupTopicResponse.Authoritative;
+
+            var lookupResponseServiceUrl = new Uri(GetBrokerServiceUrl(response.LookupTopicResponse));
+
+            if (response.LookupTopicResponse.Response == CommandLookupTopicResponse.Types.LookupType.Redirect || !response.LookupTopicResponse.Authoritative)
             {
-                await DisposeConnection(serviceUrl).ConfigureAwait(false);
+                physicalUrl = lookupResponseServiceUrl;
+                continue;
             }
-        }
 
-        public async ValueTask<IConnection> FindConnectionForTopic(string topic, CancellationToken cancellationToken)
-        {
-            var lookup = new CommandLookupTopic
+            if (response.LookupTopicResponse.ProxyThroughServiceUrl)
             {
-                Topic = topic,
-                Authoritative = false,
-                AdvertisedListenerName = _listenerName
-            };
-
-            var physicalUrl = _serviceUrl;
-
-            while (true)
-            {
-                var connection = await GetConnection(physicalUrl, cancellationToken).ConfigureAwait(false);
-                var response = await connection.Send(lookup, cancellationToken).ConfigureAwait(false);
-
-                response.Expect(BaseCommand.Type.LookupResponse);
-
-                if (response.LookupTopicResponse.Response == CommandLookupTopicResponse.LookupType.Failed)
-                    response.LookupTopicResponse.Throw();
-
-                lookup.Authoritative = response.LookupTopicResponse.Authoritative;
-
-                var lookupResponseServiceUrl = new Uri(GetBrokerServiceUrl(response.LookupTopicResponse));
-
-                if (response.LookupTopicResponse.Response == CommandLookupTopicResponse.LookupType.Redirect || !response.LookupTopicResponse.Authoritative)
-                {
-                    physicalUrl = lookupResponseServiceUrl;
-                    continue;
-                }
-
-                if (response.LookupTopicResponse.ProxyThroughServiceUrl)
-                {
-                    var url = new PulsarUrl(physicalUrl, lookupResponseServiceUrl);
-                    return await GetConnection(url, cancellationToken).ConfigureAwait(false);
-                }
-
-                // LookupType is 'Connect', ServiceUrl is local and response is authoritative. Assume the Pulsar server is a standalone docker.
-                return lookupResponseServiceUrl.IsLoopback
-                    ? connection
-                    : await GetConnection(lookupResponseServiceUrl, cancellationToken).ConfigureAwait(false);
+                var url = new PulsarUrl(physicalUrl, lookupResponseServiceUrl);
+                return await GetConnection(url, cancellationToken).ConfigureAwait(false);
             }
+
+            // LookupType is 'Connect', ServiceUrl is local and response is authoritative. Assume the Pulsar server is a standalone docker.
+            return lookupResponseServiceUrl.IsLoopback
+                ? connection
+                : await GetConnection(lookupResponseServiceUrl, cancellationToken).ConfigureAwait(false);
         }
+    }
 
-        private string GetBrokerServiceUrl(CommandLookupTopicResponse response)
+    private string GetBrokerServiceUrl(CommandLookupTopicResponse response)
+    {
+        var hasBrokerServiceUrl = !string.IsNullOrEmpty(response.BrokerServiceUrl);
+        var hasBrokerServiceUrlTls = !string.IsNullOrEmpty(response.BrokerServiceUrlTls);
+
+        switch (_encryptionPolicy)
         {
-            var hasBrokerServiceUrl = !string.IsNullOrEmpty(response.BrokerServiceUrl);
-            var hasBrokerServiceUrlTls = !string.IsNullOrEmpty(response.BrokerServiceUrlTls);
-
-            switch (_encryptionPolicy)
-            {
-                case EncryptionPolicy.EnforceEncrypted:
-                    if (!hasBrokerServiceUrlTls)
-                        throw new ConnectionSecurityException("Cannot enforce encrypted connections. The lookup topic response from broker gave no secure alternative.");
-                    return response.BrokerServiceUrlTls;
-                case EncryptionPolicy.EnforceUnencrypted:
-                    if (!hasBrokerServiceUrl)
-                        throw new ConnectionSecurityException("Cannot enforce unencrypted connections. The lookup topic response from broker gave no unsecure alternative.");
-                    return response.BrokerServiceUrl;
-                case EncryptionPolicy.PreferEncrypted:
-                    return hasBrokerServiceUrlTls ? response.BrokerServiceUrlTls : response.BrokerServiceUrl;
-                default:
-                    return hasBrokerServiceUrl ? response.BrokerServiceUrl : response.BrokerServiceUrlTls;
-            }
+            case EncryptionPolicy.EnforceEncrypted:
+                if (!hasBrokerServiceUrlTls)
+                    throw new ConnectionSecurityException("Cannot enforce encrypted connections. The lookup topic response from broker gave no secure alternative.");
+                return response.BrokerServiceUrlTls;
+            case EncryptionPolicy.EnforceUnencrypted:
+                if (!hasBrokerServiceUrl)
+                    throw new ConnectionSecurityException("Cannot enforce unencrypted connections. The lookup topic response from broker gave no unsecure alternative.");
+                return response.BrokerServiceUrl;
+            case EncryptionPolicy.PreferEncrypted:
+                return hasBrokerServiceUrlTls ? response.BrokerServiceUrlTls : response.BrokerServiceUrl;
+            default:
+                return hasBrokerServiceUrl ? response.BrokerServiceUrl : response.BrokerServiceUrlTls;
         }
+    }
 
-        private ValueTask<Connection> GetConnection(Uri serviceUrl, CancellationToken cancellationToken)
-        {
-            return GetConnection(new PulsarUrl(serviceUrl,serviceUrl), cancellationToken);
-        }
+    private async ValueTask<Connection> GetConnection(Uri serviceUrl, CancellationToken cancellationToken)
+        => await GetConnection(new PulsarUrl(serviceUrl, serviceUrl), cancellationToken).ConfigureAwait(false);
 
-        private async ValueTask<Connection> GetConnection(PulsarUrl url, CancellationToken cancellationToken)
-        {
-            using (await _lock.Lock(cancellationToken).ConfigureAwait(false))
-            {
-                if (_connections.TryGetValue(url, out Connection? connection) && connection is not null)
-                    return connection;
-
-                return await EstablishNewConnection(url, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        private async Task<Connection> EstablishNewConnection(PulsarUrl url, CancellationToken cancellationToken)
-        {
-            var stream = await _connector.Connect(url.Physical).ConfigureAwait(false);
-            var connection = new Connection(new PulsarStream(stream));
-            DotPulsarEventSource.Log.ConnectionCreated();
-            _connections[url] = connection;
-            _ = connection.ProcessIncommingFrames().ContinueWith(t => DisposeConnection(url));
-            var commandConnect = _commandConnect;
-
-            if (url.ProxyThroughServiceUrl)
-                commandConnect = WithProxyToBroker(_commandConnect, url.Logical);
-
-            var response = await connection.Send(commandConnect, cancellationToken).ConfigureAwait(false);
-            response.Expect(BaseCommand.Type.Connected);
+    private async ValueTask<Connection> GetConnection(PulsarUrl url, CancellationToken cancellationToken)
+    {
+        if (_connections.TryGetValue(url, out var connection) && connection is not null)
             return connection;
-        }
 
-        private async ValueTask DisposeConnection(PulsarUrl serviceUrl)
+        var gate = _connectionGates.GetOrAdd(url, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            if (_connections.TryRemove(serviceUrl, out Connection? connection) && connection is not null)
-            {
-                await connection.DisposeAsync().ConfigureAwait(false);
-                DotPulsarEventSource.Log.ConnectionDisposed();
-            }
-        }
+            if (_connections.TryGetValue(url, out connection) && connection is not null)
+                return connection;
 
-        private static CommandConnect WithProxyToBroker(CommandConnect commandConnect, Uri logicalUrl)
+            return await EstablishNewConnection(url, cancellationToken).ConfigureAwait(false);
+        }
+        finally
         {
-            return new CommandConnect
-            {
-                AuthData = commandConnect.AuthData,
-                AuthMethod = commandConnect.AuthMethod,
-                AuthMethodName = commandConnect.AuthMethodName,
-                ClientVersion = commandConnect.ClientVersion,
-                OriginalPrincipal = commandConnect.OriginalPrincipal,
-                ProtocolVersion = commandConnect.ProtocolVersion,
-                OriginalAuthData = commandConnect.OriginalAuthData,
-                OriginalAuthMethod = commandConnect.OriginalAuthMethod,
-                ProxyToBrokerUrl = $"{logicalUrl.Host}:{logicalUrl.Port}"
-            };
+            gate.Release();
         }
+    }
 
-        private async Task CloseInactiveConnections(TimeSpan interval, CancellationToken cancellationToken)
+    private async Task<Connection> EstablishNewConnection(PulsarUrl url, CancellationToken cancellationToken)
+    {
+        var stream = await _connector.Connect(url.Physical, cancellationToken).ConfigureAwait(false);
+
+        var commandConnect = _commandConnect;
+        if (url.ProxyThroughServiceUrl)
+            commandConnect = WithProxyToBroker(commandConnect, url.Logical);
+
+        var connection = Connection.Connect(new PulsarStream(stream), _authentication, _keepAliveInterval, _closeInactiveConnectionsInterval);
+        _ = connection.State.OnStateChangeFrom(ConnectionState.Connected, CancellationToken.None).AsTask().ContinueWith(t => DisposeConnection(url, connection), CancellationToken.None);
+        var response = await connection.Send(commandConnect, cancellationToken).ConfigureAwait(false);
+        response.Expect(BaseCommand.Types.Type.Connected);
+        _connections[url] = connection;
+        connection.MaxMessageSize = response.Connected.MaxMessageSize;
+        return connection;
+    }
+
+    private async ValueTask DisposeConnection(PulsarUrl serviceUrl, Connection connection)
+    {
+        var pair = new KeyValuePair<PulsarUrl, Connection>(serviceUrl, connection);
+#if NETSTANDARD2_0 || NETSTANDARD2_1
+        ((ICollection<KeyValuePair<PulsarUrl, Connection>>)_connections).Remove(pair);
+#else
+        _connections.TryRemove(pair);
+#endif
+        await connection.DisposeAsync().ConfigureAwait(false);
+    }
+
+    private static CommandConnect WithProxyToBroker(CommandConnect commandConnect, Uri logicalUrl)
+    {
+        var command = new CommandConnect
         {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(interval, cancellationToken).ConfigureAwait(false);
+            ClientVersion = commandConnect.ClientVersion,
+            ProtocolVersion = commandConnect.ProtocolVersion,
+            ProxyToBrokerUrl = $"{logicalUrl.Host}:{logicalUrl.Port}",
+            FeatureFlags = commandConnect.FeatureFlags
+        };
 
-                    using (await _lock.Lock(cancellationToken).ConfigureAwait(false))
-                    {
-                        var serviceUrls = _connections.Keys;
-                        foreach (var serviceUrl in serviceUrls)
-                        {
-                            var connection = _connections[serviceUrl];
-                            if (connection is null)
-                                continue;
+        if (commandConnect.HasAuthData)
+            command.AuthData = commandConnect.AuthData;
+        if (commandConnect.HasAuthMethod)
+            command.AuthMethod = commandConnect.AuthMethod;
+        if (commandConnect.HasAuthMethodName)
+            command.AuthMethodName = commandConnect.AuthMethodName;
+        if (command.HasOriginalPrincipal)
+            command.OriginalPrincipal = commandConnect.OriginalPrincipal;
+        if (command.HasOriginalAuthData)
+            command.OriginalAuthData = commandConnect.OriginalAuthData;
+        if (command.HasOriginalAuthMethod)
+            command.OriginalAuthMethod = commandConnect.OriginalAuthMethod;
 
-                            if (!await connection.HasChannels(cancellationToken).ConfigureAwait(false))
-                                await DisposeConnection(serviceUrl).ConfigureAwait(false);
-                        }
-                    }
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
-        }
+        return command;
+    }
 
-        private sealed class PulsarUrl : IEquatable<PulsarUrl>
+    private sealed class PulsarUrl : IEquatable<PulsarUrl>
+    {
+        public PulsarUrl(Uri physical, Uri logical)
         {
-            public PulsarUrl(Uri physical, Uri logical)
-            {
-                Physical = physical;
-                Logical = logical;
-                ProxyThroughServiceUrl = physical != logical;
-            }
-
-            public Uri Physical { get; }
-
-            public Uri Logical { get; }
-
-            public bool ProxyThroughServiceUrl { get; }
-
-            public bool Equals(PulsarUrl? other)
-            {
-                if (other is null)
-                    return false;
-
-                if (ReferenceEquals(this, other))
-                    return true;
-
-                return Physical.Equals(other.Physical) && Logical.Equals(other.Logical);
-            }
-
-            public override bool Equals(object? obj)
-                => obj is PulsarUrl url && Equals(url);
-
-            public override int GetHashCode()
-                => HashCode.Combine(Physical, Logical);
-
-            public override string ToString()
-                => $"{nameof(Physical)}: {Physical}, {nameof(Logical)}: {Logical}, {nameof(ProxyThroughServiceUrl)}: {ProxyThroughServiceUrl}";
+            Physical = physical;
+            Logical = logical;
+            ProxyThroughServiceUrl = physical != logical;
         }
+
+        public Uri Physical { get; }
+
+        public Uri Logical { get; }
+
+        public bool ProxyThroughServiceUrl { get; }
+
+        public bool Equals(PulsarUrl? other)
+        {
+            if (other is null)
+                return false;
+
+            if (ReferenceEquals(this, other))
+                return true;
+
+            return Physical.Equals(other.Physical) && Logical.Equals(other.Logical);
+        }
+
+        public override bool Equals(object? obj)
+            => obj is PulsarUrl url && Equals(url);
+
+        public override int GetHashCode()
+            => HashCode.Combine(Physical, Logical);
+
+        public override string ToString()
+            => $"{nameof(Physical)}: {Physical}, {nameof(Logical)}: {Logical}, {nameof(ProxyThroughServiceUrl)}: {ProxyThroughServiceUrl}";
+    }
+
+    public async ValueTask<uint> GetNumberOfPartitions(string topic, CancellationToken cancellationToken = default)
+    {
+        var connection = await FindConnectionForTopic(topic, cancellationToken).ConfigureAwait(false);
+        var commandPartitionedMetadata = new CommandPartitionedTopicMetadata { Topic = topic };
+        var response = await connection.Send(commandPartitionedMetadata, cancellationToken).ConfigureAwait(false);
+
+        response.Expect(BaseCommand.Types.Type.PartitionedMetadataResponse);
+
+        if (response.PartitionMetadataResponse.Response == CommandPartitionedTopicMetadataResponse.Types.LookupType.Failed)
+            response.PartitionMetadataResponse.Throw();
+
+        return response.PartitionMetadataResponse.Partitions;
+    }
+
+    public async ValueTask<IEnumerable<string>> GetTopicsOfNamespace(CommandGetTopicsOfNamespace.Types.Mode mode, Regex topicsPattern, CancellationToken cancellationToken = default)
+    {
+        var topicUriPattern = new Regex(@"^(persistent|non-persistent)://([^/]+)/([^/]+)/(.+)$", RegexOptions.Compiled);
+
+        var patternString = topicsPattern.ToString();
+
+        var match = topicUriPattern.Match(patternString);
+        if (!match.Success)
+            throw new InvalidTopicsPatternException($"The topics pattern '{patternString}' is not valid");
+
+        var persistence = match.Groups[1].Value;
+        var tenant = match.Groups[2].Value;
+        var ns = match.Groups[3].Value;
+
+        if (!string.IsNullOrEmpty(persistence))
+        {
+            if (persistence.Equals("persistent"))
+                mode = CommandGetTopicsOfNamespace.Types.Mode.Persistent;
+            else
+                mode = CommandGetTopicsOfNamespace.Types.Mode.NonPersistent;
+        }
+
+        var getTopicsOfNamespace = new CommandGetTopicsOfNamespace
+        {
+            Mode = mode,
+            Namespace = $"{tenant}/{ns}",
+            TopicsPattern = patternString
+        };
+
+        var connection = await GetConnection(_serviceUrl, cancellationToken).ConfigureAwait(false);
+        var response = await connection.Send(getTopicsOfNamespace, cancellationToken).ConfigureAwait(false);
+
+        response.Expect(BaseCommand.Types.Type.GetTopicsOfNamespaceResponse);
+
+        if (response.GetTopicsOfNamespaceResponse.Filtered)
+            return response.GetTopicsOfNamespaceResponse.Topics;
+
+        var topics = new List<string>();
+
+        foreach (var topic in response.GetTopicsOfNamespaceResponse.Topics)
+        {
+            if (topicsPattern.Match(topic).Success)
+                topics.Add(topic);
+        }
+
+        return topics;
     }
 }

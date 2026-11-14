@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,30 +12,28 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Compression
+namespace DotPulsar.Internal.Compression;
+
+using DotPulsar.Internal.Abstractions;
+using System.Buffers;
+
+public sealed class Compressor : ICompress
 {
-    using DotPulsar.Internal.Abstractions;
-    using System;
-    using System.Buffers;
+    private readonly IDisposable? _disposable;
+    private readonly Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> _compress;
 
-    public sealed class Compressor : ICompress
+    public Compressor(Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> compress, IDisposable? disposable = null)
     {
-        private readonly IDisposable? _disposable;
-        private readonly Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> _compress;
-
-        public Compressor(Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> compress, IDisposable? disposable = null)
-        {
-            _disposable = disposable;
-            _compress = compress;
-        }
-
-        public Compressor(Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> compress)
-            => _compress = compress;
-
-        public ReadOnlySequence<byte> Compress(ReadOnlySequence<byte> data)
-            => _compress(data);
-
-        public void Dispose()
-            => _disposable?.Dispose();
+        _disposable = disposable;
+        _compress = compress;
     }
+
+    public Compressor(Func<ReadOnlySequence<byte>, ReadOnlySequence<byte>> compress)
+        => _compress = compress;
+
+    public ReadOnlySequence<byte> Compress(ReadOnlySequence<byte> data)
+        => _compress(data);
+
+    public void Dispose()
+        => _disposable?.Dispose();
 }

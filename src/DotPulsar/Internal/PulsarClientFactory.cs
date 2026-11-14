@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,15 +12,13 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
-{
-    using Abstractions;
-    using DotPulsar.Abstractions;
-    using System;
+namespace DotPulsar.Internal;
 
-    public sealed class PulsarClientFactory
-    {
-        public static PulsarClient CreatePulsarClient(IConnectionPool connectionPool, ProcessManager processManager, IHandleException exceptionHandler, Uri serviceUrl)
-            => new(connectionPool, processManager, exceptionHandler, serviceUrl);
-    }
+using DotPulsar.Abstractions;
+using DotPulsar.Internal.Abstractions;
+
+public sealed class PulsarClientFactory
+{
+    public static PulsarClient CreatePulsarClient(IConnectionPool connectionPool, IHandleException exceptionHandler, Uri serviceUrl)
+        => new(connectionPool, exceptionHandler, serviceUrl);
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,17 +12,12 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal.Abstractions
-{
-    using System;
-    using System.Buffers;
-    using System.Collections.Generic;
-    using System.Threading;
-    using System.Threading.Tasks;
+namespace DotPulsar.Internal.Abstractions;
 
-    public interface IPulsarStream : IAsyncDisposable
-    {
-        Task Send(ReadOnlySequence<byte> sequence);
-        IAsyncEnumerable<ReadOnlySequence<byte>> Frames(CancellationToken cancellationToken = default);
-    }
+using System.Buffers;
+
+public interface IPulsarStream : IAsyncDisposable
+{
+    Task Send(ReadOnlySequence<byte> sequence);
+    IAsyncEnumerable<ReadOnlySequence<byte>> Frames(CancellationToken cancellationToken = default);
 }

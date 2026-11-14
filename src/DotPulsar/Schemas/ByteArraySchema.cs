@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,27 +12,25 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Schemas
+namespace DotPulsar.Schemas;
+
+using DotPulsar.Abstractions;
+using System.Buffers;
+using System.Collections.Immutable;
+
+/// <summary>
+/// Schema definition for raw messages using byte[].
+/// </summary>
+public sealed class ByteArraySchema : ISchema<byte[]>
 {
-    using DotPulsar.Abstractions;
-    using System;
-    using System.Buffers;
-    using System.Collections.Immutable;
+    public ByteArraySchema()
+        => SchemaInfo = new SchemaInfo("Bytes", Array.Empty<byte>(), SchemaType.None, ImmutableDictionary<string, string>.Empty);
 
-    /// <summary>
-    /// Schema definition for raw messages using byte[].
-    /// </summary>
-    public sealed class ByteArraySchema : ISchema<byte[]>
-    {
-        public ByteArraySchema()
-            => SchemaInfo = new SchemaInfo("Bytes", Array.Empty<byte>(), SchemaType.None, ImmutableDictionary<string, string>.Empty);
+    public SchemaInfo SchemaInfo { get; }
 
-        public SchemaInfo SchemaInfo { get; }
+    public byte[] Decode(ReadOnlySequence<byte> bytes, byte[]? schemaVersion = null)
+        => bytes.ToArray();
 
-        public byte[] Decode(ReadOnlySequence<byte> bytes, byte[]? schemaVersion = null)
-            => bytes.ToArray();
-
-        public ReadOnlySequence<byte> Encode(byte[] message)
-            => new(message);
-    }
+    public ReadOnlySequence<byte> Encode(byte[] message)
+        => new(message);
 }

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,23 +12,20 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Abstractions;
+
+/// <summary>
+/// A producer abstraction.
+/// </summary>
+public interface IProducer : IStateHolder<ProducerState>, IAsyncDisposable
 {
-    using System;
+    /// <summary>
+    /// The producer's service url.
+    /// </summary>
+    Uri ServiceUrl { get; }
 
     /// <summary>
-    /// A producer abstraction.
+    /// The producer's topic.
     /// </summary>
-    public interface IProducer : IState<ProducerState>, IAsyncDisposable
-    {
-        /// <summary>
-        /// The producer's service url.
-        /// </summary>
-        public Uri ServiceUrl { get; }
-
-        /// <summary>
-        /// The producer's topic.
-        /// </summary>
-        string Topic { get; }
-    }
+    string Topic { get; }
 }

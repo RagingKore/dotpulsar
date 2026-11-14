@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,55 +12,54 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Abstractions;
+using DotPulsar.Exceptions;
+using DotPulsar.Internal.Exceptions;
+using System.Net.Sockets;
+
+public sealed class DefaultExceptionHandler : IHandleException
 {
-    using DotPulsar.Abstractions;
-    using DotPulsar.Exceptions;
-    using Exceptions;
-    using System;
-    using System.Net.Sockets;
-    using System.Threading;
-    using System.Threading.Tasks;
-
-    public sealed class DefaultExceptionHandler : IHandleException
+    public ValueTask OnException(ExceptionContext exceptionContext)
     {
-        private readonly TimeSpan _retryInterval;
-
-        public DefaultExceptionHandler(TimeSpan retryInterval)
-            => _retryInterval = retryInterval;
-
-        public async ValueTask OnException(ExceptionContext exceptionContext)
-        {
-            exceptionContext.Result = DetermineFaultAction(exceptionContext.Exception, exceptionContext.CancellationToken);
-
-            if (exceptionContext.Result == FaultAction.Retry)
-                await Task.Delay(_retryInterval, exceptionContext.CancellationToken).ConfigureAwait(false);
-
-            exceptionContext.ExceptionHandled = true;
-        }
-
-        private static FaultAction DetermineFaultAction(Exception exception, CancellationToken cancellationToken)
-            => exception switch
-            {
-                TooManyRequestsException _ => FaultAction.Retry,
-                ChannelNotReadyException _ => FaultAction.Retry,
-                ServiceNotReadyException _ => FaultAction.Retry,
-                MetadataException _ => FaultAction.Retry,
-                ConsumerNotFoundException _ => FaultAction.Retry,
-                ConnectionDisposedException _ => FaultAction.Retry,
-                AsyncLockDisposedException _ => FaultAction.Retry,
-                PulsarStreamDisposedException _ => FaultAction.Retry,
-                AsyncQueueDisposedException _ => FaultAction.Retry,
-                OperationCanceledException _ => cancellationToken.IsCancellationRequested ? FaultAction.Rethrow : FaultAction.Retry,
-                DotPulsarException _ => FaultAction.Rethrow,
-                SocketException socketException => socketException.SocketErrorCode switch
-                {
-                    SocketError.HostNotFound => FaultAction.Rethrow,
-                    SocketError.HostUnreachable => FaultAction.Rethrow,
-                    SocketError.NetworkUnreachable => FaultAction.Rethrow,
-                    _ => FaultAction.Retry
-                },
-                _ => FaultAction.Rethrow
-            };
+        exceptionContext.Result = DetermineFaultAction(exceptionContext.Exception, exceptionContext.CancellationToken);
+        exceptionContext.ExceptionHandled = true;
+#if NET6_0_OR_GREATER
+        return ValueTask.CompletedTask;
+#else
+        return new ValueTask();
+#endif
     }
+
+    private static FaultAction DetermineFaultAction(Exception exception, CancellationToken cancellationToken)
+        => exception switch
+        {
+            TooManyRequestsException _ => FaultAction.Retry,
+            ChannelNotReadyException _ => FaultAction.Retry,
+            ServiceNotReadyException _ => FaultAction.Retry,
+            MetadataException _ => FaultAction.Rethrow,
+            ConsumerNotFoundException _ => FaultAction.Retry,
+            ConsumerBusyException _ => FaultAction.Retry,
+            ProducerBusyException _ => FaultAction.Retry,
+            ProducerFencedException _ => FaultAction.Rethrow,
+            ConnectionDisposedException _ => FaultAction.Retry,
+            AsyncLockDisposedException _ => FaultAction.Retry,
+            PulsarStreamDisposedException _ => FaultAction.Retry,
+            AsyncQueueDisposedException _ => FaultAction.Retry,
+            AsyncQueueWithCursorDisposedException => FaultAction.Retry,
+            AsyncQueueWithCursorNoItemException => FaultAction.Rethrow,
+            ProducerSendReceiptOrderingException _ => FaultAction.Retry,
+            OperationCanceledException _ => cancellationToken.IsCancellationRequested ? FaultAction.Rethrow : FaultAction.Retry,
+            DotPulsarException _ => FaultAction.Rethrow,
+            IOException _ => FaultAction.Retry,
+            SocketException socketException => socketException.SocketErrorCode switch
+            {
+                SocketError.HostNotFound => FaultAction.Rethrow,
+                SocketError.HostUnreachable => FaultAction.Rethrow,
+                SocketError.NetworkUnreachable => FaultAction.Rethrow,
+                _ => FaultAction.Retry
+            },
+            _ => FaultAction.Rethrow
+        };
 }

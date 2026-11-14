@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,24 +12,20 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Abstractions;
+
+/// <summary>
+/// An state change handling abstraction.
+/// </summary>
+public interface IHandleStateChanged<TStateChanged>
 {
-    using System.Threading;
-    using System.Threading.Tasks;
+    /// <summary>
+    /// Called after a state has changed.
+    /// </summary>
+    ValueTask OnStateChanged(TStateChanged stateChanged, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// An state change handling abstraction.
+    /// The cancellation token to use when waiting for and handling state changes.
     /// </summary>
-    public interface IHandleStateChanged<TStateChanged>
-    {
-        /// <summary>
-        /// Called after a state has changed.
-        /// </summary>
-        ValueTask OnStateChanged(TStateChanged stateChanged, CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// The cancellation token to use when waiting for and handling state changes.
-        /// </summary>
-        CancellationToken CancellationToken { get; }
-    }
+    CancellationToken CancellationToken { get; }
 }

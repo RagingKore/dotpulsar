@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,87 +12,77 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+public sealed class StateTaskCollection<TState> where TState : notnull
 {
-    using System.Collections.Generic;
-    using System.Threading;
-    using System.Threading.Tasks;
+    private readonly object _lock;
+    private readonly LinkedList<StateTask<TState>> _awaiters;
 
-    public sealed class StateTaskCollection<TState> where TState : notnull
+    public StateTaskCollection()
     {
-        private readonly object _lock;
-        private readonly LinkedList<StateTask<TState>> _awaiters;
+        _lock = new object();
+        _awaiters = new LinkedList<StateTask<TState>>();
+    }
 
-        public StateTaskCollection()
+    public Task<TState> CreateTaskFor(TState state, StateChanged changed, CancellationToken cancellationToken)
+    {
+        LinkedListNode<StateTask<TState>> node;
+
+        lock (_lock)
         {
-            _lock = new object();
-            _awaiters = new LinkedList<StateTask<TState>>();
+            node = _awaiters.AddFirst(new StateTask<TState>(state, changed));
         }
 
-        public Task<TState> CreateTaskFor(TState state, StateChanged changed, CancellationToken cancellationToken)
-        {
-            LinkedListNode<StateTask<TState>> node;
+        node.Value.CancelableCompletionSource.SetupCancellation(() => RemoveAndDispose(node), cancellationToken);
 
-            lock (_lock)
+        return node.Value.CancelableCompletionSource.Task;
+    }
+
+    public void CompleteTasksAwaiting(TState state) => SetState(state, true);
+
+    public void CompleteAllTasks(TState state) => SetState(state, false);
+
+    private LinkedListNode<StateTask<TState>>? GetFirst()
+    {
+        lock (_lock)
+        {
+            return _awaiters.First;
+        }
+    }
+
+    private void SetState(TState state, bool onlyAwaiting)
+    {
+        var awaiter = GetFirst();
+
+        while (awaiter is not null)
+        {
+            var next = awaiter.Next;
+
+            if (!onlyAwaiting || awaiter.Value.IsAwaiting(state))
             {
-                node = _awaiters.AddFirst(new StateTask<TState>(state, changed));
+                awaiter.Value.CancelableCompletionSource.SetResult(state);
+                RemoveAndDispose(awaiter);
             }
 
-            node.Value.CancelableCompletionSource.SetupCancellation(() => TaskWasCanceled(node), cancellationToken);
-
-            return node.Value.CancelableCompletionSource.Task;
+            awaiter = next;
         }
+    }
 
-        public void CompleteTasksAwaiting(TState state)
+    private void RemoveAndDispose(LinkedListNode<StateTask<TState>> node)
+    {
+        lock (_lock)
         {
-            lock (_lock)
+            try
             {
-                var awaiter = _awaiters.First;
-
-                while (awaiter is not null)
-                {
-                    var next = awaiter.Next;
-
-                    if (awaiter.Value.IsAwaiting(state))
-                    {
-                        _awaiters.Remove(awaiter);
-                        awaiter.Value.CancelableCompletionSource.SetResult(state);
-                        awaiter.Value.CancelableCompletionSource.Dispose();
-                    }
-
-                    awaiter = next;
-                }
+                _awaiters.Remove(node);
+            }
+            catch
+            {
+                // Ignore
             }
         }
 
-        public void CompleteAllTasks(TState state)
-        {
-            lock (_lock)
-            {
-                foreach (var awaiter in _awaiters)
-                {
-                    awaiter.CancelableCompletionSource.SetResult(state);
-                    awaiter.CancelableCompletionSource.Dispose();
-                }
-
-                _awaiters.Clear();
-            }
-        }
-
-        private void TaskWasCanceled(LinkedListNode<StateTask<TState>> node)
-        {
-            lock (_lock)
-            {
-                try
-                {
-                    _awaiters.Remove(node);
-                    node.Value.Dispose();
-                }
-                catch
-                {
-                    // Ignore
-                }
-            }
-        }
+        node.Value.Dispose();
     }
 }

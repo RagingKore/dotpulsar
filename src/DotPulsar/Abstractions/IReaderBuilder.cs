@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,46 +12,55 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Abstractions
+namespace DotPulsar.Abstractions;
+
+/// <summary>
+/// A reader building abstraction.
+/// </summary>
+public interface IReaderBuilder<TMessage>
 {
     /// <summary>
-    /// A reader building abstraction.
+    /// Number of messages that will be prefetched. The default is 1000.
     /// </summary>
-    public interface IReaderBuilder<TMessage>
-    {
-        /// <summary>
-        /// Number of messages that will be prefetched. The default is 1000.
-        /// </summary>
-        IReaderBuilder<TMessage> MessagePrefetchCount(uint count);
+    IReaderBuilder<TMessage> MessagePrefetchCount(uint count);
 
-        /// <summary>
-        /// Whether to read from the compacted topic. The default is 'false'.
-        /// </summary>
-        IReaderBuilder<TMessage> ReadCompacted(bool readCompacted);
+    /// <summary>
+    /// Whether to read from the compacted topic. The default is 'false'.
+    /// </summary>
+    IReaderBuilder<TMessage> ReadCompacted(bool readCompacted);
 
-        /// <summary>
-        /// Set the reader name. This is optional.
-        /// </summary>
-        IReaderBuilder<TMessage> ReaderName(string name);
+    /// <summary>
+    /// Set the reader name. This is optional.
+    /// </summary>
+    IReaderBuilder<TMessage> ReaderName(string name);
 
-        /// <summary>
-        /// The initial reader position is set to the specified message id. This is required.
-        /// </summary>
-        IReaderBuilder<TMessage> StartMessageId(MessageId messageId);
+    /// <summary>
+    /// The initial reader position is set to the specified message id. This is required.
+    /// </summary>
+    IReaderBuilder<TMessage> StartMessageId(MessageId messageId);
 
-        /// <summary>
-        /// Register a state changed handler.
-        /// </summary>
-        IReaderBuilder<TMessage> StateChangedHandler(IHandleStateChanged<ReaderStateChanged> handler);
+    /// <summary>
+    /// Register a state changed handler.
+    /// </summary>
+    IReaderBuilder<TMessage> StateChangedHandler(IHandleStateChanged<ReaderStateChanged> handler);
 
-        /// <summary>
-        /// Set the topic for this reader. This is required.
-        /// </summary>
-        IReaderBuilder<TMessage> Topic(string topic);
+    /// <summary>
+    /// Set the subscription name for this reader. This is optional.
+    /// </summary>
+    IReaderBuilder<TMessage> SubscriptionName(string name);
 
-        /// <summary>
-        /// Create the reader.
-        /// </summary>
-        IReader<TMessage> Create();
-    }
+    /// <summary>
+    /// Set the subscription role prefix for this reader. The default is 'Reader'. This is optional.
+    /// </summary>
+    IReaderBuilder<TMessage> SubscriptionRolePrefix(string subscriptionRolePrefix);
+
+    /// <summary>
+    /// Set the topic for this reader. This is required.
+    /// </summary>
+    IReaderBuilder<TMessage> Topic(string topic);
+
+    /// <summary>
+    /// Create the reader.
+    /// </summary>
+    IReader<TMessage> Create();
 }

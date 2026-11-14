@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,10 +12,12 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Exceptions
+namespace DotPulsar.Exceptions;
+
+/// <summary>
+/// Producer with same name is already connected
+/// </summary>
+public sealed class ProducerBusyException : DotPulsarException
 {
-    public sealed class ProducerBusyException : DotPulsarException
-    {
-        public ProducerBusyException(string message) : base(message) { }
-    }
+    public ProducerBusyException(string message) : base(message) { }
 }

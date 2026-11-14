@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -12,58 +12,56 @@
  * limitations under the License.
  */
 
-namespace DotPulsar.Internal
+namespace DotPulsar.Internal;
+
+using DotPulsar.Internal.Abstractions;
+
+public sealed class ReaderProcess : Process
 {
-    using Abstractions;
-    using System;
-    using System.Threading.Tasks;
+    private readonly IStateManager<ReaderState> _stateManager;
+    private readonly IContainsChannel _subReader;
 
-    public sealed class ReaderProcess : Process
+    public ReaderProcess(
+        Guid correlationId,
+        IStateManager<ReaderState> stateManager,
+        IContainsChannel reader) : base(correlationId)
     {
-        private readonly IStateManager<ReaderState> _stateManager;
-        private readonly IEstablishNewChannel _reader;
+        _stateManager = stateManager;
+        _subReader = reader;
+    }
 
-        public ReaderProcess(
-            Guid correlationId,
-            IStateManager<ReaderState> stateManager,
-            IEstablishNewChannel reader) : base(correlationId)
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync().ConfigureAwait(false);
+        _stateManager.SetState(ReaderState.Closed);
+    }
+
+    protected override void CalculateState()
+    {
+        if (_stateManager.IsFinalState())
+            return;
+
+        if (ExecutorState == ExecutorState.Faulted)
         {
-            _stateManager = stateManager;
-            _reader = reader;
+            var formerState = _stateManager.SetState(ReaderState.Faulted);
+            if (formerState != ReaderState.Faulted)
+                ActionQueue.Enqueue(async _ => await _subReader.ChannelFaulted(Exception!).ConfigureAwait(false));
+            return;
         }
 
-        public override async ValueTask DisposeAsync()
+        switch (ChannelState)
         {
-            _stateManager.SetState(ReaderState.Closed);
-            CancellationTokenSource.Cancel();
-            await _reader.DisposeAsync().ConfigureAwait(false);
-        }
-
-        protected override void CalculateState()
-        {
-            if (_stateManager.IsFinalState())
+            case ChannelState.ClosedByServer:
+            case ChannelState.Disconnected:
+                _stateManager.SetState(ReaderState.Disconnected);
+                ScheduleReconnect(_subReader);
                 return;
-
-            if (ExecutorState == ExecutorState.Faulted)
-            {
-                _stateManager.SetState(ReaderState.Faulted);
+            case ChannelState.Connected:
+                _stateManager.SetState(ReaderState.Connected);
                 return;
-            }
-
-            switch (ChannelState)
-            {
-                case ChannelState.ClosedByServer:
-                case ChannelState.Disconnected:
-                    _stateManager.SetState(ReaderState.Disconnected);
-                    _ = _reader.EstablishNewChannel(CancellationTokenSource.Token);
-                    return;
-                case ChannelState.Connected:
-                    _stateManager.SetState(ReaderState.Connected);
-                    return;
-                case ChannelState.ReachedEndOfTopic:
-                    _stateManager.SetState(ReaderState.ReachedEndOfTopic);
-                    return;
-            }
+            case ChannelState.ReachedEndOfTopic:
+                _stateManager.SetState(ReaderState.ReachedEndOfTopic);
+                return;
         }
     }
 }
